@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Express Delivery - ระบบจัดส่งพัสดุ</title>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://bit.ly/fontiton5" type="text/css" charset="utf-8" />
+  <style>
+    :root {
+      --primary: #FFC107;
+      --primary-dark: #FFA000;
+      --secondary: #FF9800;
+      --accent: #FF5722;
+      --dark: #212121;
+      --light: #F5F5F5;
+      --success: #4CAF50;
+      --error: #F44336;
+      --info: #2196F3;
+    }
+
+    body {
+      font-family: 'line_seed_sans_th';
+      background: linear-gradient(135deg, #FFF9C4 0%, #FFECB3 100%);
+      color: var(--dark);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-slideUp {
+      animation: slideUp 0.5s ease-out;
+    }
+
+    .animate-pulse {
+      animation: pulse 0.5s ease-in-out;
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Custom Components */
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      font-size: 1rem;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: var(--dark);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-secondary {
+      background-color: var(--secondary);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background-color: #F57C00;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-accent {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background-color: #E64A19;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background-color: #388E3C;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .tab-container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tab {
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-radius: 16px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      color: #666;
+    }
+
+    .tab.active {
+      background-color: var(--primary);
+      color: var(--dark);
+      box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+    }
+
+    .tab:hover:not(.active) {
+      background-color: rgba(255, 193, 7, 0.1);
+    }
+
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 0.9rem 1.2rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+      background: #fafafa;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.2);
+      background: white;
+    }
+
+    /* Timeline Styles */
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(to bottom, var(--accent), var(--success));
+    }
+
+    .timeline-item {
+      position: relative;
+      padding-bottom: 2rem;
+      margin-left: 1rem;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.75rem;
+      top: 0.5rem;
+      width: 1.2rem;
+      height: 1.2rem;
+      border-radius: 50%;
+      background-color: #ddd;
+      border: 3px solid white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+    }
+
+    .timeline-item.status-created::before {
+      background-color: #9E9E9E;
+    }
+
+    .timeline-item.status-processing::before {
+      background-color: var(--info);
+    }
+
+    .timeline-item.status-delivering::before {
+      background-color: var(--primary);
+    }
+
+    .timeline-item.status-delivered::before {
+      background-color: var(--success);
+    }
+
+    .timeline-item.status-cancelled::before {
+      background-color: var(--error);
+    }
+
+    .timeline-item.active::before {
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 0 4px rgba(63, 136, 197, 0.3);
+    }
+
+    .timeline-content {
+      background: white;
+      padding: 1.2rem;
+      border-radius: 16px;
+      border-left: 4px solid var(--accent);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+    }
+
+    .timeline-item.status-delivered .timeline-content {
+      border-left-color: var(--success);
+    }
+
+    .timeline-item:last-child {
+      padding-bottom: 0;
+    }
+
+    /* Status Badges */
+    .status-badge {
+      display: inline-block;
+      padding: 0.35rem 0.9rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-pending {
+      background-color: #F5F5F5;
+      color: #757575;
+    }
+
+    .status-processing {
+      background-color: #E3F2FD;
+      color: #0D47A1;
+    }
+
+    .status-delivering {
+      background-color: #FFF8E1;
+      color: #FF8F00;
+    }
+
+    .status-delivered {
+      background-color: #E8F5E9;
+      color: #1B5E20;
+    }
+
+    .status-cancelled {
+      background-color: #FFEBEE;
+      color: #B71C1C;
+    }
+
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      padding: 2.5rem;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      width: 500px;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: none;
+      border: none;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: #666;
+      transition: all 0.2s;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .close-modal:hover {
+      background: #f5f5f5;
+      color: var(--accent);
+    }
+
+    #qr-reader {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+
+    #signaturePad {
+      border: 2px solid #e0e0e0;
+      border-radius: 16px;
+      background: white;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .signature-controls {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+
+    .qr-code-container {
+      text-align: center;
+      margin: 1rem 0;
+    }
+
+    .qr-code-container img {
+      max-width: 200px;
+      height: auto;
+      border: 1px solid #eee;
+      border-radius: 16px;
+      padding: 1rem;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .loader {
+      width: 60px;
+      height: 60px;
+      border: 6px solid var(--primary);
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1.2rem 1.8rem;
+      border-radius: 16px;
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      max-width: 400px;
+    }
+
+    .toast.active {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast-success {
+      background-color: var(--success);
+    }
+
+    .toast-error {
+      background-color: var(--error);
+    }
+
+    .toast-info {
+      background-color: var(--info);
+    }
+
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--dark);
+      padding: 1.2rem 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
+      transform: rotate(30deg);
+    }
+
+
+    .hero {
+      background: linear-gradient(rgba(255, 193, 7, 0.9), rgba(255, 152, 0, 0.9)),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/></svg>');
+      background-size: cover;
+      border-radius: 24px;
+      padding: 3rem;
+      margin: 2rem 0;
+      color: var(--dark);
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      max-width: 700px;
+      margin: 0 auto 1.5rem;
+      color: rgba(0, 0, 0, 0.8);
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 10px;
+      background: linear-gradient(90deg, var(--accent), var(--success));
+    }
+
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2.5rem 0;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 20px;
+      padding: 1.8rem;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    .stat-number {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      font-size: 1rem;
+      color: #666;
+    }
+
+
+    footer {
+      background: linear-gradient(135deg, var(--dark) 0%, #333 100%);
+      color: white;
+      padding: 3rem 0 1.5rem;
+      margin-top: 4rem;
+      position: relative;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 0;
+      right: 0;
+      height: 20px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 20px 20px 0 0;
+    }
+
+
+    @media (max-width: 768px) {
+      .tab {
+        padding: 0.8rem;
+        font-size: 0.875rem;
+      }
+
+      .btn {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.9rem;
+      }
+
+      .modal-content {
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+
+      .timeline {
+        padding-left: 1.5rem;
+      }
+
+      .signature-controls {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .hero {
+        padding: 2rem 1rem;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loader"></div>
+  </div>
+
+  <div id="toast" class="toast">
+    <i id="toastIcon" class="fas fa-info-circle"></i>
+    <span id="toastMessage"></span>
+  </div>
+
+  <div id="qrScannerModal" class="modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeQRScanner()">&times;</button>
+      <h3 class="text-xl font-bold mb-4 text-center text-[#FF5722]">สแกน QR Code พัสดุ</h3>
+      <div id="qr-reader"></div>
+      <div id="camera-permission-message" class="text-center py-4 hidden">
+        <p class="text-gray-600 mb-2">ไม่สามารถเปิดกล้องได้</p>
+        <p class="text-sm text-gray-500 mb-4">กรุณาอนุญาตการใช้งานกล้องในเบราว์เซอร์</p>
+        <button class="btn btn-accent" onclick="requestCameraPermission()">ลองอีกครั้ง</button>
+      </div>
+      <div class="mt-4 text-center">
+        <button class="btn btn-secondary" onclick="closeQRScanner()">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="signatureModal" class="modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeSignatureModal()">&times;</button>
+      <h3 class="text-xl font-bold mb-4 text-center text-[#FF5722]">ลายเซ็นรับพัสดุ</h3>
+      <div class="mb-4 text-center">
+        <p class="text-gray-600 text-lg">หมายเลขพัสดุ: <span id="signatureTrackingNumber"
+            class="font-semibold text-[#FF9800]"></span></p>
+        <p class="text-gray-600">ผู้รับ: <span id="signatureReceiverName" class="font-semibold"></span></p>
+      </div>
+      <div class="text-center">
+        <p class="text-sm text-gray-500 mb-2">กรุณาลงลายเซ็นในกรอบด้านล่าง</p>
+        <center> <canvas id="signaturePad" height="200"></canvas></center>
+        <div class="signature-controls">
+          <button class="btn btn-secondary" onclick="clearSignature()">
+            <i class="fas fa-eraser mr-2"></i>ล้างลายเซ็น
+          </button>
+          <button class="btn btn-success" onclick="saveSignature()">
+            <i class="fas fa-save mr-2"></i>บันทึกลายเซ็น
+          </button>
+          <button class="btn btn-accent" onclick="closeSignatureModal()">
+            <i class="fas fa-times mr-2"></i>ยกเลิก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="container px-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-white p-2 rounded-xl shadow-md">
+
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-[#FF9800]" width="20" height="20"
+              viewBox="0 0 1024 1024">
+              <path fill="currentColor"
+                d="M848 359.3H627.7L825.8 109c4.1-5.3.4-13-6.3-13H436c-2.8 0-5.5 1.5-6.9 4L170 547.5c-3.1 5.3.7 12 6.9 12h174.4l-89.4 357.6c-1.9 7.8 7.5 13.3 13.3 7.7L853.5 373c5.2-4.9 1.7-13.7-5.5-13.7z" />
+            </svg>
+          </div>
+          <h1 class="text-xl md:text-2xl font-bold">Tunmai Express Delivery</h1>
+        </div>
+        <div id="userInfo" class="flex items-center gap-2">
+          <div class="w-10 h-10 bg-white rounded-xl overflow-hidden shadow-md">
+            <img id="userPicture"
+              src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExejFva3JveXJmeGJvcjlucHB4M21pN3FudnEwc2g2cjZqMG4wZWJ2YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/U5DM9YQUbZ2aIVgpKZ/giphy.gif"
+              alt="User" class="w-full h-full object-cover">
+          </div>
+          <span id="userName" class="hidden md:inline font-medium">กำลังโหลด...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="container px-4 py-6">
+    <div class="hero">
+      <h1>บริการจัดส่งพัสดุที่รวดเร็วและปลอดภัย</h1>
+      <p>เรามอบประสบการณ์การจัดส่งพัสดุที่ดีที่สุด ด้วยระบบติดตามแบบเรียลไทม์และทีมงานมืออาชีพ</p>
+      <button class="btn btn-primary animate-pulse">
+        <i class="fas fa-shipping-fast mr-2"></i>มีประกันสินค้า
+      </button>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-box-open"></i>
+        </div>
+        <div class="stat-number">15,892</div>
+        <div class="stat-label">พัสดุที่จัดส่ง</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-users"></i>
+        </div>
+        <div class="stat-number">256</div>
+        <div class="stat-label">ไรเดอร์มืออาชีพ</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-map-marked-alt"></i>
+        </div>
+        <div class="stat-number">77</div>
+        <div class="stat-label">จังหวัดทั่วไทย</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">
+          <i class="fas fa-smile"></i>
+        </div>
+        <div class="stat-number">98.7%</div>
+        <div class="stat-label">ความพึงพอใจ</div>
+      </div>
+    </div>
+
+    <div class="tab-container">
+      <div class="flex overflow-x-auto">
+        <div id="tabTrack" class="tab active" onclick="switchTab('track')">
+          <div class="flex items-center gap-4">
+            <i class="fas fa-search-location"></i>
+            <span>Track</span>
+          </div>
+        </div>
+        <div id="tabCreate" class="tab" onclick="switchTab('create')">
+          <div class="flex items-center gap-4">
+            <i class="fas fa-plus-circle"></i>
+            <span>Form</span>
+          </div>
+        </div>
+        <div id="tabHistory" class="tab" onclick="switchTab('history')">
+          <div class="flex items-center gap-4">
+            <i class="fas fa-history"></i>
+            <span>History</span>
+          </div>
+        </div>
+        <div id="tabDelivery" class="tab" onclick="switchTab('delivery')" hidden>
+          <div class="flex items-center gap-4">
+            <i class="fas fa-truck"></i>
+            <span>Delivery</span>
+          </div>
+        </div>
+        <div id="tabRider" class="tab" onclick="switchTab('rider')" hidden>
+          <div class="flex items-center gap-4">
+            <i class="fas fa-user-cog"></i>
+            <span>Rider</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main>
+      <section id="trackSection" class="animate-fadeIn">
+        <div class="max-w-md mx-auto">
+          <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#FF5722] flex items-center gap-2">
+              <i class="fas fa-search"></i>ติดตามสถานะพัสดุ
+            </h2>
+            <div class="input-group">
+              <label for="trackingNumber" class="input-label">หมายเลขพัสดุ</label>
+              <div class="flex gap-2">
+                <input type="text" id="trackingNumber" class="input-field flex-1"
+                  placeholder="กรอกหมายเลขพัสดุ เช่น TH12345678">
+                <button id="trackButton" class="btn btn-primary" onclick="trackDelivery()">
+                  <i class="fas fa-search mr-1"></i>ค้นหา
+                </button>
+              </div>
+              <div class="mt-2">
+                <button class="btn btn-accent w-full" onclick="openQRScanner()">
+                  <i class="fas fa-qrcode mr-2"></i>สแกน QR Code
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="trackResult" class="card p-6 mt-6 hidden animate-slideUp">
+          </div>
+        </div>
+      </section>
+
+      <section id="createSection" class="hidden animate-fadeIn">
+        <div class="max-w-2xl mx-auto">
+          <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#FF5722] flex items-center gap-2">
+              <i class="fas fa-plus-circle"></i>สร้างรายการส่งพัสดุใหม่
+            </h2>
+
+            <form id="createForm">
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-[#FF9800] flex items-center gap-2">
+                  <i class="fas fa-user"></i>ข้อมูลผู้ส่ง
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="input-group">
+                    <label for="senderName" class="input-label">ชื่อผู้ส่ง</label>
+                    <input type="text" id="senderName" class="input-field" placeholder="ชื่อ-นามสกุล">
+                  </div>
+                  <div class="input-group">
+                    <label for="senderPhone" class="input-label">เบอร์โทรศัพท์</label>
+                    <input type="tel" id="senderPhone" class="input-field" placeholder="0xx-xxx-xxxx">
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="senderAddress" class="input-label">ที่อยู่</label>
+                  <textarea id="senderAddress" class="input-field" rows="3"
+                    placeholder="บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์"></textarea>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-[#FF9800] flex items-center gap-2">
+                  <i class="fas fa-user-friends"></i>ข้อมูลผู้รับ
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="input-group">
+                    <label for="receiverName" class="input-label">ชื่อผู้รับ</label>
+                    <input type="text" id="receiverName" class="input-field" placeholder="ชื่อ-นามสกุล">
+                  </div>
+                  <div class="input-group">
+                    <label for="receiverPhone" class="input-label">เบอร์โทรศัพท์</label>
+                    <input type="tel" id="receiverPhone" class="input-field" placeholder="0xx-xxx-xxxx">
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="receiverAddress" class="input-label">ที่อยู่</label>
+                  <textarea id="receiverAddress" class="input-field" rows="3"
+                    placeholder="บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์"></textarea>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-[#FF9800] flex items-center gap-2">
+                  <i class="fas fa-box-open"></i>รายละเอียดพัสดุ
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="input-group">
+                    <label for="packageType" class="input-label">ประเภทพัสดุ</label>
+                    <select id="packageType" class="input-field">
+                      <option value="parcel">พัสดุทั่วไป</option>
+                      <option value="document">เอกสาร</option>
+                      <option value="electronics">อิเล็กทรอนิกส์</option>
+                      <option value="fragile">สินค้าแตกหักง่าย</option>
+                      <option value="food">อาหาร</option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label for="weight" class="input-label">น้ำหนัก (กก.)</label>
+                    <input type="number" id="weight" class="input-field" placeholder="0.00" step="0.01" min="0">
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="dimensions" class="input-label">ขนาด (กว้าง x ยาว x สูง ซม.)</label>
+                  <input type="text" id="dimensions" class="input-field" placeholder="เช่น 30 x 20 x 10">
+                </div>
+                <div class="flex flex-wrap gap-4 mt-4">
+                  <div class="flex items-center">
+                    <input type="checkbox" id="insurance" class="mr-2 h-5 w-5 text-[#FF5722]">
+                    <label for="insurance">ประกันพัสดุ</label>
+                  </div>
+                  <div class="flex items-center">
+                    <input type="checkbox" id="express" class="mr-2 h-5 w-5 text-[#FF5722]">
+                    <label for="express">จัดส่งด่วน</label>
+                  </div>
+                </div>
+                <div class="input-group mt-4">
+                  <label for="notes" class="input-label">หมายเหตุ</label>
+                  <textarea id="notes" class="input-field" rows="2" placeholder="ข้อมูลเพิ่มเติม (ถ้ามี)"></textarea>
+                </div>
+              </div>
+            </form>
+
+            <div class="flex justify-end">
+              <button id="createButton" class="btn btn-primary" onclick="createDelivery()">
+                <i class="fas fa-check-circle mr-2"></i>สร้างรายการส่งพัสดุ
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="historySection" class="hidden animate-fadeIn">
+        <div class="max-w-4xl mx-auto">
+          <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#FF5722] flex items-center gap-2">
+              <i class="fas fa-history"></i>ประวัติการส่งพัสดุ
+            </h2>
+            <div id="historyList" class="space-y-4">
+              <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin fa-2x mb-4"></i>
+                <p>กำลังโหลดข้อมูล...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="deliverySection" class="hidden animate-fadeIn">
+        <div class="max-w-4xl mx-auto">
+          <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#FF5722] flex items-center gap-2">
+              <i class="fas fa-truck"></i>จัดส่งพัสดุ (สำหรับไรเดอร์)
+            </h2>
+            <div class="mb-4">
+              <button class="btn btn-accent" onclick="openQRScanner()">
+                <i class="fas fa-qrcode mr-2"></i>สแกน QR Code พัสดุ
+              </button>
+            </div>
+            <div id="deliveryList" class="space-y-4">
+              <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-box-open fa-2x mb-4"></i>
+                <p>ไม่มีพัสดุที่ต้องจัดส่ง</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="riderSection" class="hidden animate-fadeIn">
+        <div class="max-w-4xl mx-auto">
+          <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#FF5722] flex items-center gap-2">
+              <i class="fas fa-user-cog"></i>ระบบจัดการไรเดอร์
+            </h2>
+
+            <div class="mb-6">
+              <h3 class="text-lg font-semibold mb-3 text-[#FF9800] flex items-center gap-2">
+                <i class="fas fa-sync-alt"></i>อัพเดทสถานะพัสดุ
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="input-group">
+                  <label for="updateTrackingNumber" class="input-label">หมายเลขพัสดุ</label>
+                  <input type="text" id="updateTrackingNumber" class="input-field" placeholder="TH12345678">
+                </div>
+                <div class="input-group">
+                  <label for="newStatus" class="input-label">สถานะใหม่</label>
+                  <select id="newStatus" class="input-field">
+                    <option value="processing">รับพัสดุแล้ว</option>
+                    <option value="delivering">กำลังจัดส่ง</option>
+                    <option value="delivered">จัดส่งสำเร็จ</option>
+                    <option value="cancelled">ยกเลิก</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label class="input-label">&nbsp;</label>
+                  <button class="btn btn-primary w-full" onclick="updatePackageStatus()">
+                    <i class="fas fa-save mr-2"></i>อัพเดทสถานะ
+                  </button>
+                </div>
+              </div>
+              <div class="input-group">
+                <label for="statusNote" class="input-label">หมายเหตุ (ถ้ามี)</label>
+                <input type="text" id="statusNote" class="input-field" placeholder="เช่น ไม่พบที่อยู่, ผู้รับไม่อยู่">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <button class="btn btn-secondary" onclick="openQRScanner()">
+                <i class="fas fa-qrcode mr-2"></i>สแกน QR
+              </button>
+              <button class="btn btn-accent" onclick="loadTodayDeliveries()">
+                <i class="fas fa-calendar-day mr-2"></i>วันนี้
+              </button>
+              <button class="btn btn-success" onclick="viewCompletedDeliveries()">
+                <i class="fas fa-check-circle mr-2"></i>สำเร็จแล้ว
+              </button>
+              <button class="btn btn-primary" onclick="refreshRiderData()">
+                <i class="fas fa-sync-alt mr-2"></i>รีเฟรชทั้งหมด
+              </button>
+            </div>
+
+            <div id="riderDeliveryList" class="space-y-4">
+              <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin fa-2x mb-4"></i>
+                <p>กำลังโหลดข้อมูล...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <div class="container px-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <h3 class="text-lg font-semibold mb-3">Tunmai Express Delivery</h3>
+          <p class="text-sm text-gray-300">บริการจัดส่งพัสดุที่รวดเร็ว ปลอดภัย และมีประสิทธิภาพ ครอบคลุมทั่วประเทศ</p>
+          <div class="flex gap-3 mt-3">
+            <a href="#" class="text-gray-300 hover:text-white"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white"><i class="fab fa-line"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-gray-300 hover:text-white"><i class="fab fa-youtube"></i></a>
+          </div>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-3">ติดต่อเรา</h3>
+          <p class="text-sm text-gray-300 mb-2"><i class="fas fa-phone-alt mr-2"></i>02-123-4567</p>
+          <p class="text-sm text-gray-300 mb-2"><i class="fas fa-envelope mr-2"></i>info@iton5.com</p>
+          <p class="text-sm text-gray-300"><i class="fas fa-map-marker-alt mr-2"></i>123 ถนนรัชดาภิเษก กรุงเทพฯ 10310
+          </p>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold mb-3">เวลาทำการ</h3>
+          <p class="text-sm text-gray-300 mb-2"><i class="fas fa-clock mr-2"></i>จันทร์ - ศุกร์: 08:00 - 18:00 น.</p>
+          <p class="text-sm text-gray-300 mb-2"><i class="fas fa-clock mr-2"></i>เสาร์: 09:00 - 15:00 น.</p>
+          <p class="text-sm text-gray-300"><i class="fas fa-clock mr-2"></i>อาทิตย์: ปิดทำการ</p>
+        </div>
+      </div>
+      <div class="mt-6 pt-4 border-t border-gray-700 text-center text-sm text-gray-400">
+        &copy; 2025 Tunmai Express Delivery. All rights reserved.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+
+    const API_URL = 'https://script.google.com/macros/s/AKfycbymEax6f3Qeboz_nNgwM0sUjuv6LGzRUsa8uqRE8MXuXb81TqiNLee6w97vI07bVTSCvA/exec';
+    const LIFF_ID = '2007650744-PXnayjxe';
+    const botBasicId = '@278xzgde'
+
+
+    let userId = null;
+    let userName = null;
+    let userPicture = null;
+    let html5QrCode = null;
+    let isDrawing = false;
+    let currentDeliveryForSignature = null;
+    let cameraPermissionGranted = false;
+    let signaturePadCanvas, signaturePad;
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeLIFF();
+      initializeSignaturePad();
+      checkCameraPermission();
+    });
+
+
+    async function checkCameraPermission() {
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const permission = await navigator.permissions.query({ name: 'camera' });
+          if (permission.state === 'granted') {
+            cameraPermissionGranted = true;
+          }
+        }
+      } catch (error) {
+        console.log('Camera permission check failed:', error);
+      }
+    }
+
+
+    async function requestCameraPermission() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }
+        });
+
+        stream.getTracks().forEach(track => track.stop());
+        cameraPermissionGranted = true;
+        document.getElementById('camera-permission-message').classList.add('hidden');
+        initializeQRScanner();
+        showToast('ได้รับอนุญาตใช้งานกล้องแล้ว', 'success');
+      } catch (error) {
+        console.error('Camera permission denied:', error);
+        showToast('ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตการใช้งานกล้องในเบราว์เซอร์', 'error');
+      }
+    }
+
+
+    async function initializeLIFF() {
+      try {
+        await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          userId = profile.userId;
+          userName = profile.displayName;
+          userPicture = profile.pictureUrl;
+
+          document.getElementById('userName').textContent = userName;
+          document.getElementById('userPicture').src = userPicture;
+          document.getElementById('userName').classList.remove('hidden');
+          liff.getFriendship().then((data) => {
+            if (!data.friendFlag) {
+              Swal.fire('เดี๋ยวก่อน!', 'คุณยังไม่ได้เป็นเพื่อนกับเรา', 'error').then(() => {
+                window.location = 'https://line.me/R/ti/p/' + botBasicId
+              })
+            }
+          });
+
+          loadDeliveryHistory();
+        } else {
+          liff.login({ redirectUri: window.location.href });
+        }
+
+
+      } catch (error) {
+        console.error('LIFF initialization failed', error);
+        showToast('ไม่สามารถเชื่อมต่อกับ LINE ได้ (กำลังใช้โหมดทดสอบ)', 'info');
+
+      }
+    }
+
+
+    function initializeSignaturePad() {
+      const canvas = document.getElementById('signaturePad');
+      const ctx = canvas.getContext('2d');
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseout', stopDrawing);
+
+      canvas.addEventListener('touchstart', startDrawing);
+      canvas.addEventListener('touchmove', draw);
+      canvas.addEventListener('touchend', stopDrawing);
+
+      function startDrawing(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        e.preventDefault();
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000000';
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        e.preventDefault();
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+    }
+
+
+    function switchTab(tabName) {
+      document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden'));
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+
+      document.getElementById(`${tabName}Section`).classList.remove('hidden');
+      document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+
+      if (tabName === 'history' && userId) loadDeliveryHistory();
+      else if (tabName === 'delivery') loadDeliveryList();
+      else if (tabName === 'rider') loadRiderDeliveries();
+    }
+
+
+    async function openQRScanner() {
+      document.getElementById('qrScannerModal').classList.add('active');
+      document.getElementById('camera-permission-message').classList.add('hidden');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('เบราว์เซอร์ไม่รองรับการใช้งานกล้อง', 'error');
+        return;
+      }
+
+      try {
+        if (!cameraPermissionGranted) { await requestCameraPermission(); } else {
+          initializeQRScanner();
+        }
+
+
+      } catch (error) {
+        document.getElementById('camera-permission-message').classList.remove('hidden');
+      }
+    }
+
+    function initializeQRScanner() {
+      if (html5QrCode && html5QrCode.isScanning) return;
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+      html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+        .catch(() => {
+          showToast('ไม่สามารถเปิดกล้องหลังได้ ลองใช้กล้องอื่น', 'info');
+          Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length > 0) {
+              html5QrCode.start(devices[0].id, config, onScanSuccess, onScanFailure)
+                .catch(() => document.getElementById('camera-permission-message').classList.remove('hidden'));
+            } else {
+              document.getElementById('camera-permission-message').classList.remove('hidden');
+            }
+          });
+        });
+    }
+
+    function closeQRScanner() {
+      document.getElementById('qrScannerModal').classList.remove('active');
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().catch(err => { });
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      closeQRScanner();
+      let trackingNumber = decodedText.includes('data=') ? new URL(decodedText).searchParams.get('data') : decodedText;
+
+      const activeTabId = document.querySelector('.tab.active').id;
+      if (activeTabId === 'tabRider') document.getElementById('updateTrackingNumber').value = trackingNumber;
+      else {
+        document.getElementById('trackingNumber').value = trackingNumber;
+        trackDelivery();
+      }
+      showToast('สแกน QR Code สำเร็จ', 'success');
+    }
+
+    function onScanFailure(error) { /* Silent */ }
+
+
+    function openSignatureModal(delivery) {
+      currentDeliveryForSignature = delivery;
+      document.getElementById('signatureTrackingNumber').textContent = delivery.trackingNumber;
+      document.getElementById('signatureReceiverName').textContent = delivery.receiverName;
+      document.getElementById('signatureModal').classList.add('active');
+      clearSignature();
+    }
+
+    function closeSignatureModal() {
+      document.getElementById('signatureModal').classList.remove('active');
+      currentDeliveryForSignature = null;
+    }
+
+    function clearSignature() {
+      const canvas = document.getElementById('signaturePad');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function saveSignature() {
+      const canvas = document.getElementById('signaturePad');
+      const signatureData = canvas.toDataURL();
+
+      updateDeliveryStatus(currentDeliveryForSignature.trackingNumber, 'delivered', 'จัดส่งสำเร็จ (ลงลายเซ็นแล้ว)', signatureData);
+      closeSignatureModal();
+    }
+
+    function generateQRCode(trackingNumber) {
+      return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(trackingNumber)}&size=200x200&qzone=1`;
+    }
+
+
+    function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
+    function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toast.className = 'toast';
+      toast.classList.add(`toast-${type}`, 'active');
+      toastMessage.textContent = message;
+
+
+      if (type === 'success') {
+        toastIcon.className = 'fas fa-check-circle';
+      } else if (type === 'error') {
+        toastIcon.className = 'fas fa-exclamation-circle';
+      } else {
+        toastIcon.className = 'fas fa-info-circle';
+      }
+
+      setTimeout(() => toast.classList.remove('active'), 3000);
+    }
+
+
+
+    async function fetchAPI(data) {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        console.error('API request failed:', error);
+        throw error;
+      }
+    }
+
+    async function trackDelivery() {
+      const trackingNumber = document.getElementById('trackingNumber').value.trim();
+      if (!trackingNumber) {
+        showToast('กรุณากรอกหมายเลขพัสดุ', 'error');
+        return;
+      }
+      showLoading();
+      try {
+        const response = await fetchAPI({ operation: 'getDelivery', trackingNumber });
+        if (response.status === 'success') displayTrackResult(response.data);
+        else {
+          showToast(response.message || 'ไม่พบข้อมูลพัสดุ', 'error');
+          document.getElementById('trackResult').classList.add('hidden');
+        }
+      } catch (error) {
+        showToast('เกิดข้อผิดพลาดในการติดตามพัสดุ', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function createDelivery() {
+      const form = document.getElementById('createForm');
+      const deliveryData = {
+        senderName: document.getElementById('senderName').value.trim(),
+        receiverName: document.getElementById('receiverName').value.trim(),
+        receiverAddress: document.getElementById('receiverAddress').value.trim()
+      };
+
+      if (!deliveryData.senderName || !deliveryData.receiverName || !deliveryData.receiverAddress) {
+        showToast('กรุณากรอกข้อมูลผู้ส่ง, ผู้รับ, และที่อยู่ให้ครบถ้วน', 'error');
+        return;
+      }
+
+      showLoading();
+      try {
+        const response = await fetchAPI({
+          operation: 'createDelivery',
+          ...deliveryData,
+          senderPhone: document.getElementById('senderPhone').value.trim(),
+          senderAddress: document.getElementById('senderAddress').value.trim(),
+          receiverPhone: document.getElementById('receiverPhone').value.trim(),
+          packageType: document.getElementById('packageType').value,
+          weight: document.getElementById('weight').value,
+          dimensions: document.getElementById('dimensions').value.trim(),
+          insurance: document.getElementById('insurance').checked,
+          express: document.getElementById('express').checked,
+          notes: document.getElementById('notes').value.trim(),
+          userId,
+          userName
+        });
+
+        if (response.status === 'success') {
+          showToast('สร้างรายการส่งพัสดุเรียบร้อยแล้ว', 'success');
+          form.reset();
+          switchTab('track');
+          document.getElementById('trackingNumber').value = response.data.trackingNumber;
+          await trackDelivery();
+        } else {
+          showToast(response.message || 'เกิดข้อผิดพลาด', 'error');
+        }
+      } catch (error) {
+        showToast('การเชื่อมต่อล้มเหลว', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function updatePackageStatus() {
+      const trackingNumber = document.getElementById('updateTrackingNumber').value.trim();
+      if (!trackingNumber) {
+        showToast('กรุณากรอกหมายเลขพัสดุ', 'error');
+        return;
+      }
+
+      const newStatus = document.getElementById('newStatus').value;
+      const note = document.getElementById('statusNote').value.trim();
+      await updateDeliveryStatus(trackingNumber, newStatus, getStatusText(newStatus), null, note);
+
+      document.getElementById('updateTrackingNumber').value = '';
+      document.getElementById('statusNote').value = '';
+    }
+
+    async function updateDeliveryStatus(trackingNumber, status, description = null, signature = null, note = null) {
+      showLoading();
+      try {
+        const payload = {
+          operation: 'updateStatus',
+          trackingNumber,
+          newStatus: status,
+          description,
+          signature,
+          note,
+          userName
+        };
+        const response = await fetchAPI(payload);
+        if (response.status === 'success') {
+          showToast('อัพเดทสถานะสำเร็จ', 'success');
+          await Promise.all([loadDeliveryHistory(), loadDeliveryList(), loadRiderDeliveries()]);
+          if (!document.getElementById('trackResult').classList.contains('hidden') && document.getElementById('trackingNumber').value === trackingNumber) {
+            await refreshTrackResult(trackingNumber);
+          }
+        } else {
+          showToast(response.message || 'อัพเดทสถานะล้มเหลว', 'error');
+        }
+      } catch (error) {
+        showToast('เกิดข้อผิดพลาดในการอัพเดทสถานะ', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function loadDeliveryHistory() {
+      if (!userId) return;
+      const listEl = document.getElementById('historyList');
+      listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin fa-2x mb-4"></i><p>กำลังโหลด...</p></div>';
+      try {
+        const response = await fetchAPI({ operation: 'getDeliveries', userId });
+        if (response.status === 'success' && response.data.length > 0) {
+          listEl.innerHTML = response.data.map(d => `
+            <div class="card p-4 hover:shadow-lg transition-all animate-slideUp">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-bold text-lg">${d.trackingNumber}</h3>
+                  <div class="text-sm text-gray-500">วันที่สร้าง: ${new Date(d.createdAt).toLocaleDateString('th-TH', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })} น.</div>
+                </div>
+                <span class="status-badge ${getStatusClass(d.status)}">${getStatusText(d.status)}</span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-sm">
+                <div><span class="text-gray-500">ผู้รับ:</span> ${d.receiverName || '-'}</div>
+                <div><span class="text-gray-500">ประเภท:</span> ${getPackageTypeName(d.packageType)}</div>
+              </div>
+              <div class="mt-3 flex justify-between items-center">
+                <div class="qr-code-container" style="margin:0; padding:0;">
+                  <img src="${generateQRCode(d.trackingNumber)}" alt="QR" style="width:60px; height:60px; padding:4px; border-radius:8px; border:1px solid #eee;"/>
+                </div>
+                <button class="btn btn-accent text-sm" onclick="viewDeliveryDetails('${d.trackingNumber}')">
+                  <i class="fas fa-info-circle mr-1"></i>ดูรายละเอียด
+                </button>
+              </div>
+            </div>`).join('');
+        } else {
+          listEl.innerHTML = `<div class="text-center py-8"><p class="text-gray-500">ยังไม่มีประวัติการส่ง</p><button class="btn btn-secondary mt-4" onclick="switchTab('create')"><i class="fas fa-plus mr-2"></i>สร้างรายการใหม่</button></div>`;
+        }
+      } catch (error) {
+        listEl.innerHTML = `<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>โหลดข้อมูลล้มเหลว</div>`;
+      }
+    }
+
+    async function loadDeliveryList() {
+      const listEl = document.getElementById('deliveryList');
+      listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin fa-2x mb-4"></i><p>กำลังโหลด...</p></div>';
+      try {
+        const response = await fetchAPI({ operation: 'getDeliveringPackages' });
+        if (response.status === 'success' && response.data.length > 0) {
+          listEl.innerHTML = response.data.map(d => `
+            <div class="card p-4">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h3 class="font-bold text-lg">${d.trackingNumber}</h3>
+                  <span class="status-badge status-delivering">กำลังจัดส่ง</span>
+                </div>
+                <div class="qr-code-container" style="margin:0; padding:0;">
+                   <img src="${generateQRCode(d.trackingNumber)}" alt="QR" style="width:60px; height:60px; padding:4px; border-radius:8px;"/>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 text-sm">
+                <div>
+                  <h4 class="font-semibold text-[#FF9800]">ผู้รับ</h4>
+                  <p>${d.receiverName}</p><p class="text-blue-500">คลิกโทร: <a href="tel:${d.receiverPhone}" >${d.receiverPhone}</a></p><p class="text-gray-500 text-sm">${d.receiverAddress}</p>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-[#FF9800]">รายละเอียด</h4>
+                  <p>ประเภท: ${getPackageTypeName(d.packageType)}</p><p>น้ำหนัก: ${d.weight || '-'} กก.</p><p>หมายเหตุ: ${d.notes || '-'}</p>
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button class="btn btn-success" onclick="confirmDelivery('${d.trackingNumber}', '${d.receiverName}')">
+                  <i class="fas fa-check mr-2"></i>ยืนยันการส่งมอบ
+                </button>
+              </div>
+            </div>`).join('');
+        } else {
+          listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีพัสดุที่ต้องจัดส่ง</p></div>';
+        }
+      } catch (error) {
+        listEl.innerHTML = `<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>โหลดข้อมูลล้มเหลว</div>`;
+      }
+    }
+
+    async function loadRiderDeliveries() {
+      const listEl = document.getElementById('riderDeliveryList');
+      listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin fa-2x mb-4"></i><p>กำลังโหลด...</p></div>';
+      try {
+        const response = await fetchAPI({ operation: 'getAllDeliveries' });
+        if (response.status === 'success' && response.data.length > 0) {
+          listEl.innerHTML = response.data.map(d => {
+            const actionBtn = d.status === 'delivering'
+              ? `<button class="btn btn-success text-sm" onclick="confirmDelivery('${d.trackingNumber}', '${d.receiverName}')">
+                  <i class="fas fa-check mr-1"></i>ยืนยันส่งมอบ
+                </button>`
+              : `<button class="btn btn-accent text-sm" onclick="viewDeliveryDetails('${d.trackingNumber}')">
+                  <i class="fas fa-info-circle mr-1"></i>รายละเอียด
+                </button>`;
+            return `
+            <div class="card p-4">
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h3 class="font-bold text-lg">${d.trackingNumber}</h3>
+                  <span class="status-badge ${getStatusClass(d.status)}">${getStatusText(d.status)}</span>
+                </div>
+                <div class="qr-code-container" style="margin:0; padding:0;">
+                  <img src="${generateQRCode(d.trackingNumber)}" alt="QR" style="width:60px; height:60px; padding:4px; border-radius:8px;"/>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600 mb-2">ผู้รับ: ${d.receiverName} (${d.receiverAddress})</p>
+              <div class="flex justify-end">${actionBtn}</div>
+            </div>`;
+          }).join('');
+        } else {
+          listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีข้อมูลพัสดุ</p></div>';
+        }
+      } catch (error) {
+        listEl.innerHTML = `<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>โหลดข้อมูลล้มเหลว</div>`;
+      }
+    }
+
+    async function loadRiderDeliveriesSuccess() {
+      const listEl = document.getElementById('riderDeliveryList');
+      listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin fa-2x mb-4"></i><p>กำลังโหลด...</p></div>';
+      try {
+        const response = await fetchAPI({ operation: 'getAllDeliveries' });
+        if (response.status === 'success' && response.data.length > 0) {
+          // กรองเฉพาะที่ status เป็น 'delivered'
+          const deliveredData = response.data.filter(d => d.status === 'delivered');
+
+          if (deliveredData.length > 0) {
+            listEl.innerHTML = deliveredData.map(d => {
+              return `
+          <div class="card p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h3 class="font-bold text-lg">${d.trackingNumber}</h3>
+                <span class="status-badge ${getStatusClass(d.status)}">${getStatusText(d.status)}</span>
+              </div>
+              <div class="qr-code-container" style="margin:0; padding:0;">
+                <img src="${generateQRCode(d.trackingNumber)}" alt="QR" style="width:60px; height:60px; padding:4px; border-radius:8px;"/>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">ผู้รับ: ${d.receiverName} (${d.receiverAddress})</p>
+            <div class="flex justify-end">
+              <button class="btn btn-accent text-sm" onclick="viewDeliveryDetails('${d.trackingNumber}')">
+                <i class="fas fa-info-circle mr-1"></i>รายละเอียด
+              </button>
+            </div>
+          </div>`;
+            }).join('');
+          } else {
+            listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีพัสดุที่จัดส่งแล้ว</p></div>';
+          }
+        } else {
+          listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีข้อมูลพัสดุ</p></div>';
+        }
+      } catch (error) {
+        listEl.innerHTML = `<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>โหลดข้อมูลล้มเหลว</div>`;
+      }
+    }
+
+    async function loadRiderDeliveriesToday() {
+      const listEl = document.getElementById('riderDeliveryList');
+      listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-spinner fa-spin fa-2x mb-4"></i><p>กำลังโหลด...</p></div>';
+
+      try {
+        const response = await fetchAPI({ operation: 'getAllDeliveries' });
+
+        if (response.status === 'success' && response.data.length > 0) {
+          const today = new Date().toISOString().slice(0, 10); // แปลงเป็น YYYY-MM-DD
+          const deliveredData = response.data.filter(d => d.createdAt.startsWith(today));
+
+          if (deliveredData.length > 0) {
+            listEl.innerHTML = deliveredData.map(d => {
+              return `
+          <div class="card p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h3 class="font-bold text-lg">${d.trackingNumber}</h3>
+                <span class="status-badge ${getStatusClass(d.status)}">${getStatusText(d.status)}</span>
+              </div>
+              <div class="qr-code-container" style="margin:0; padding:0;">
+                <img src="${generateQRCode(d.trackingNumber)}" alt="QR" style="width:60px; height:60px; padding:4px; border-radius:8px;"/>
+              </div>
+            </div>
+            <p class="text-sm text-gray-600 mb-2">ผู้รับ: ${d.receiverName} (${d.receiverAddress})</p>
+            <div class="flex justify-end">
+              <button class="btn btn-accent text-sm" onclick="viewDeliveryDetails('${d.trackingNumber}')">
+                <i class="fas fa-info-circle mr-1"></i>รายละเอียด
+              </button>
+            </div>
+          </div>
+          `;
+            }).join('');
+          } else {
+            listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีพัสดุที่จัดส่งแล้ว</p></div>';
+          }
+        } else {
+          listEl.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fas fa-box-open fa-2x mb-4"></i><p>ไม่มีข้อมูลพัสดุ</p></div>';
+        }
+      } catch (error) {
+        listEl.innerHTML = '<div class="text-center py-8 text-red-500"><i class="fas fa-exclamation-triangle mr-2"></i>โหลดข้อมูลล้มเหลว</div>';
+        console.error('Error loading deliveries:', error);
+      }
+    }
+
+
+    function displayTrackResult(delivery) {
+      const trackResult = document.getElementById('trackResult');
+      const timelineHTML = (delivery.timeline && Array.isArray(delivery.timeline)) ? delivery.timeline.slice().reverse().map((event, index) => `
+        <div class="timeline-item status-${event.status || 'created'} ${index === 0 ? 'active' : ''}">
+          <div class="timeline-content">
+            <div class="font-semibold text-gray-800">${event.description}</div>
+            <div class="text-sm text-gray-500 mt-1">🕒  ${formatDate(event.timestamp)} น.</div>
+            ${event.note ? `<div class="text-sm text-gray-600 mt-1 italic">หมายเหตุ: ${event.note}</div>` : ''}
+          </div>
+        </div>`).join('') : '<div class="text-gray-500">ไม่มีข้อมูล</div>';
+
+      const qrCodeHTML = `<div class="qr-code-container"><h4 class="font-semibold text-[#FF9800] mb-2">QR Code พัสดุ</h4><center><img src="${generateQRCode(delivery.trackingNumber)}" alt="QR Code" /></center><p class="text-sm text-gray-500 mt-2">สแกนเพื่อติดตาม</p></div>`;
+      const signatureHTML = delivery.signature ? `<div class="mt-4"><h4 class="font-semibold text-[#FF9800] mb-2">ลายเซ็นผู้รับ</h4><img src="${delivery.signature}" alt="Signature" class="border p-2 bg-white max-w-xs rounded-lg"/></div>` : '';
+
+      trackResult.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="text-lg font-bold">${delivery.trackingNumber}</h3>
+            <span class="status-badge ${getStatusClass(delivery.status)}">${getStatusText(delivery.status)}</span>
+          </div>
+          <button class="text-[#FF5722] hover:text-[#E64A19]" onclick="refreshTrackResult('${delivery.trackingNumber}')">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <h4 class="font-semibold text-[#FF9800]">ผู้ส่ง</h4>
+            <p>${delivery.senderName || '-'}</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-[#FF9800]">ผู้รับ</h4>
+            <p>${delivery.receiverName || '-'}</p>
+            <p class="text-sm text-gray-500">${delivery.receiverAddress || '-'}</p>
+          </div>
+        </div>
+        ${qrCodeHTML}
+        <div class="mb-4">
+          <h4 class="font-semibold text-[#FF9800] mb-4">ประวัติการติดตาม</h4>
+          <div class="timeline">${timelineHTML}</div>
+        </div>
+        ${signatureHTML}`;
+
+      trackResult.classList.remove('hidden');
+    }
+
+    async function refreshTrackResult(trackingNumber) {
+      showToast('กำลังอัพเดทข้อมูล...', 'info');
+      await trackDelivery();
+    }
+
+    function viewDeliveryDetails(trackingNumber) {
+      switchTab('track');
+      document.getElementById('trackingNumber').value = trackingNumber;
+      trackDelivery();
+    }
+
+    function confirmDelivery(trackingNumber, receiverName) {
+      openSignatureModal({ trackingNumber, receiverName });
+    }
+
+    function loadTodayDeliveries() { loadRiderDeliveriesToday(); }
+    function viewCompletedDeliveries() { loadRiderDeliveriesSuccess(); }
+    function refreshRiderData() { loadRiderDeliveries(); }
+
+    function getStatusClass(s) {
+      return {
+        'pending': 'status-pending',
+        'processing': 'status-processing',
+        'delivering': 'status-delivering',
+        'delivered': 'status-delivered',
+        'cancelled': 'status-cancelled'
+      }[s] || 'status-pending';
+    }
+
+    function getStatusText(s) {
+      return {
+        'pending': 'รอดำเนินการ',
+        'processing': 'พัสดุเข้าระบบ',
+        'delivering': 'กำลังจัดส่ง',
+        'delivered': 'จัดส่งสำเร็จ',
+        'cancelled': 'ยกเลิก'
+      }[s] || 'ไม่ทราบสถานะ';
+    }
+
+    function getPackageTypeName(t) {
+      return {
+        'parcel': 'พัสดุทั่วไป',
+        'document': 'เอกสาร',
+        'electronics': 'อิเล็กทรอนิกส์',
+        'fragile': 'แตกหักง่าย',
+        'food': 'อาหาร'
+      }[t] || t || '-';
+    }
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+          return dateString;
+        }
+        return date.toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch (e) {
+        console.error("Error formatting date:", dateString, e);
+        return dateString;
+      }
+    }
+  </script>
+</body>
+
+</html>
