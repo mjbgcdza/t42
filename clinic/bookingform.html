@@ -7,8 +7,8 @@
     <meta property="og:type" content="website">
     <meta property="og:description" content="นัดหมายจองคิว">
     <meta property="og:url" content="https://page.line.me/botstickerlth">
-    <meta property="og:site_name" content="iton5">
-    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1Ck_OCfEW4dEp3A1k9yfQplYmW7qmwzFF">
+    <meta property="og:site_name" content="T42">
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1r6_z2_coDG1p8HsamKMRKBZXVrzsqifL">
     <title>Beauty Clinic by T42 - นัดหมายบริการ</title>
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -347,7 +347,7 @@
         <header class="mb-8 slide-in" style="animation-delay: 0.1s;">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-3xl font-bold gradient-text">iton5 Beauty Clinic</h1>
+                    <h1 class="text-3xl font-bold gradient-text">Beauty Clinic by T42</h1>
                     <p class="text-gray-400">นัดหมายบริการของคุณ</p>
                 </div>
                 <div class="relative w-14 h-14 animate-float">
@@ -512,7 +512,7 @@
             
             initializeLIFF();
 
-            const deployScript = "https://script.google.com/macros/s/xxxxxxxxxxxxxx/exec"
+            const deployScript = "https://script.google.com/macros/s/AKfycbzeOAp1vlBzf6AGkx3R-eA7moeBxhwdCJ7xkrqD07esZqNxvQVbvFZnBKNfqSEUxXo-/exec"
             let currentStep = 1;
             let selectedService = '';
             let selectedServiceName = '';
@@ -580,7 +580,7 @@
             
             btnViewAppointments.addEventListener('click', function() {
               //กลับไปสู่หน้าลูกค้า
-                window.location.href = '/project/bookingclinic.html';
+                window.location.href = '/clinic/booking.html';
             });
             
             btnNewAppointment.addEventListener('click', function() {
@@ -590,7 +590,7 @@
             
             function initializeLIFF() {
                 liff.init({
-                    liffId: 'xxxxxx',withLoginOnExternalBrowser: true
+                    liffId: '2007658617-JY6o24Vg',withLoginOnExternalBrowser: true
                 }).then(() => {
                     if (liff.isLoggedIn()) {
                         
