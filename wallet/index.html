@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Dashboard-iton5</title>
+    <meta name="description" content="wallet for LIFF App" />
+    <meta name="author" content="iton5" />
+    <meta property="og:title" content="wallet-iton5-thailand" />
+    <meta property="og:description" content="wallet for LIFF App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1Ck_OCfEW4dEp3A1k9yfQplYmW7qmwzFF" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://bit.ly/fontiton5" type="text/css" charset="utf-8" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'line_seed_sans_th';
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe, #dbeafe);
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .transaction-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .transaction-list::-webkit-scrollbar-thumb {
+            background-color: #94a3b8;
+            border-radius: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fadeInUp {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        .swal2-popup .swal2-styled.swal2-confirm {
+            background: linear-gradient(to right, #3b82f6, #60a5fa) !important;
+        }
+
+        .swal-custom-form {
+            text-align: left;
+        }
+
+        .swal-custom-form label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        .swal-custom-form .swal-input,
+        .swal-custom-form .swal-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .swal-custom-form .swal-input:focus,
+        .swal-custom-form .swal-select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+
+        .swal-custom-form .input-with-icon {
+            position: relative;
+        }
+
+        .swal-custom-form .input-with-icon .icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+
+        .swal-custom-form .input-with-icon .swal-input {
+            padding-left: 2.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-blue-50 text-gray-800">
+
+    <div id="loading" class="flex justify-center items-center h-screen">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+
+    <div id="app" class="hidden opacity-0">
+        <header class="p-4 sticky top-0 z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-blue-700">My Wallet</h1>
+                    <p id="displayName" class="text-sm text-gray-600">กำลังโหลด...</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button id="shareBtn" class="text-blue-600 p-2 rounded-full hover:bg-blue-100 transition-colors"
+                        title="แชร์ชวนเพื่อน">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                        </svg>
+                    </button>
+                    <img id="pictureUrl" class="w-14 h-14 rounded-full border-2 border-white shadow-lg"
+                        src="https://img.icons8.com/?size=100&id=K0whyGdxP7Ht&format=png&color=000000"
+                        alt="Profile Picture">
+                </div>
+            </div>
+        </header>
+
+        <main class="container mx-auto p-4 space-y-6">
+          
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="card p-4 rounded-xl shadow-lg">
+                    <h2 class="text-sm font-medium text-gray-500">รายรับส่วนตัว (เดือนนี้)</h2>
+                    <p id="summaryIncome" class="text-3xl font-bold text-green-600 mt-1">0.00 บ.</p>
+                </div>
+                <div class="card p-4 rounded-xl shadow-lg">
+                    <h2 class="text-sm font-medium text-gray-500">รายจ่ายส่วนตัว (เดือนนี้)</h2>
+                    <p id="summaryExpense" class="text-3xl font-bold text-red-600 mt-1">0.00 บ.</p>
+                </div>
+                <div class="card p-4 rounded-xl shadow-lg">
+                    <h2 class="text-sm font-medium text-gray-500">คงเหลือส่วนตัว</h2>
+                    <p id="summaryBalance" class="text-3xl font-bold text-blue-600 mt-1">0.00 บ.</p>
+                </div>
+            </div>
+
+          
+            <div class="card p-4 rounded-xl shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700">กระเป๋าเงินกลุ่ม</h3>
+                    <button id="createGroupWalletBtn"
+                        class="bg-blue-500 text-white text-sm font-semibold px-3 py-1 rounded-full hover:bg-blue-600 transition-colors">สร้างกลุ่มใหม่</button>
+                </div>
+                <div id="groupWalletList" class="space-y-2">
+                    <p class="text-center text-gray-500 py-4">คุณยังไม่ได้เข้าร่วมกลุ่มใดๆ</p>
+                </div>
+            </div>
+
+           
+            <div class="card p-4 rounded-xl shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700">Saving Challenges</h3>
+                    <button id="createChallengeBtn"
+                        class="bg-yellow-500 text-white text-sm font-semibold px-3 py-1 rounded-full hover:bg-yellow-600 transition-colors">สร้างคำท้า</button>
+                </div>
+                <div id="challengeList" class="space-y-3">
+                    <p class="text-center text-gray-500 py-4">คุณยังไม่ได้เข้าร่วม Challenge ใดๆ</p>
+                </div>
+            </div>
+
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card p-4 rounded-xl shadow-lg">
+                    <h3 class="font-bold mb-2 text-center text-gray-700">สัดส่วนรายจ่ายส่วนตัว</h3>
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-4 rounded-xl shadow-lg">
+                    <h3 class="font-bold mb-2 text-center text-gray-700">สัดส่วนรายรับส่วนตัว</h3>
+                    <div class="chart-container">
+                        <canvas id="incomeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+          
+            <div class="card p-4 rounded-xl shadow-lg">
+                <h3 class="font-bold mb-4 text-gray-700">รายการส่วนตัวล่าสุด</h3>
+                <div id="transactionList" class="transaction-list max-h-80 overflow-y-auto">
+                    <p class="text-center text-gray-500">ไม่มีข้อมูลรายการ...</p>
+                </div>
+            </div>
+        </main>
+
+        <button id="addTransactionBtn"
+            class="fixed bottom-6 right-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white w-16 h-16 rounded-full shadow-xl flex items-center justify-center text-4xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 transform hover:scale-110">
+            <svg class="w-8 h-8 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5"/>
+</svg>
+
+        </button>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwVLoLQ98BeMLQHTp3XYKfN60UQ6VcYxK7yay_WntOV01W0O-bEeDkEZGTM87pgjgOKTQ/exec';
+        const LIFF_ID = '2007704777-aBjrMV9V';
+        let userData = {};
+        let expenseChartInstance = null;
+        let incomeChartInstance = null;
+
+        document.addEventListener('DOMContentLoaded', main);
+
+        async function main() {
+            try {
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
+                const profile = await liff.getProfile();
+                document.getElementById('displayName').textContent = `สวัสดี, ${profile.displayName}`;
+                document.getElementById('pictureUrl').src = profile.pictureUrl;
+
+                document.getElementById('createGroupWalletBtn').addEventListener('click', handleCreateGroupWallet);
+                document.getElementById('shareBtn').addEventListener('click', handleShare);
+                document.getElementById('createChallengeBtn').addEventListener('click', handleCreateChallenge);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('action') === 'joinGroup' && urlParams.get('id')) {
+                    await handleJoinGroup(urlParams.get('id'));
+                } else if (urlParams.get('action') === 'joinChallenge' && urlParams.get('id')) {
+                    await handleJoinChallenge(urlParams.get('id'));
+                }
+
+                await fetchAndRenderData(profile.userId);
+            } catch (error) {
+                console.error('LIFF Initialization failed', error);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับ LINE ได้', 'error');
+            }
+        }
+
+        async function fetchAndRenderData(userId) {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('app').classList.add('hidden');
+            try {
+                const response = await fetch(`${API_URL}?action=getDashboardData&userId=${userId}`);
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Network response was not ok');
+
+                userData = result.data;
+
+                renderSummary(userData.summary);
+                renderWallets(userData.wallets);
+                renderCharts(userData.charts);
+                renderTransactions(userData.recentTransactions);
+                renderChallenges(userData.challenges);
+
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('opacity-0', 'hidden');
+                document.getElementById('app').classList.add('animate-fadeInUp');
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+                Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถดึงข้อมูลได้: ${error.message}`, 'error');
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentNum = progress * (end - start) + start;
+                obj.textContent = currentNum.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บ.';
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.textContent = end.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บ.';
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+
+        function renderSummary(summary) {
+            if (!summary) return;
+            animateValue(document.getElementById('summaryIncome'), 0, summary.income || 0, 1200);
+            animateValue(document.getElementById('summaryExpense'), 0, summary.expense || 0, 1200);
+            animateValue(document.getElementById('summaryBalance'), 0, summary.balance || 0, 1200);
+        }
+        function renderWallets(wallets) {
+            const listEl = document.getElementById('groupWalletList');
+            if (!wallets || !wallets.group || wallets.group.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 py-4">คุณยังไม่ได้เข้าร่วมกลุ่มใดๆ</p>';
+                return;
+            }
+            listEl.innerHTML = wallets.group.map(w => `
+                <button data-group-id="${w.groupId}" data-group-name="${w.name}" class="group-wallet-btn w-full text-left p-3 bg-white/50 hover:bg-white/90 rounded-lg shadow transition-all flex justify-between items-center">
+                    <p class="font-semibold text-blue-800">${w.name}</p>
+                    <span class="text-xs bg-blue-100 text-blue-800 font-semibold px-2 py-1 rounded-full">${w.memberCount || 1} คน</span>
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.group-wallet-btn').forEach(btn => {
+                btn.addEventListener('click', handleViewGroupWallet);
+            });
+        }
+
+        function renderCharts(charts) {
+            if (!charts) return;
+            const chartOptions = {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { fontFamily: 'Sarabun' } } }
+            };
+
+            const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+            if (expenseChartInstance) expenseChartInstance.destroy();
+            expenseChartInstance = new Chart(expenseCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(charts.expenseByCat || {}),
+                    datasets: [{ data: Object.values(charts.expenseByCat || {}), backgroundColor: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6'], borderWidth: 0 }]
+                },
+                options: chartOptions
+            });
+
+            const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+            if (incomeChartInstance) incomeChartInstance.destroy();
+            incomeChartInstance = new Chart(incomeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(charts.incomeByCat || {}),
+                    datasets: [{ data: Object.values(charts.incomeByCat || {}), backgroundColor: ['#16a34a', '#65a30d', '#0284c7', '#4f46e5'], borderWidth: 0 }]
+                },
+                options: chartOptions
+            });
+        }
+
+        function renderTransactions(transactions) {
+            const listEl = document.getElementById('transactionList');
+            if (!transactions || transactions.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 py-8">ยังไม่มีรายการส่วนตัว...</p>';
+                return;
+            }
+            listEl.innerHTML = transactions.map(tx => `
+                <div class="flex items-center justify-between py-2 border-b border-gray-200/80 last:border-b-0">
+                    <div>
+                        <p class="font-semibold truncate text-gray-800">${tx.description}</p>
+                        <p class="text-sm text-gray-500">${tx.category} @ ${tx.wallet}</p>
+                    </div>
+                    <div class="flex items-center">
+                        <p class="font-bold mr-2 ${tx.type === 'รายจ่าย' ? 'text-red-600' : 'text-green-600'}">${tx.type === 'รายจ่าย' ? '-' : '+'}${tx.amount.toLocaleString('th-TH')} บ.</p>
+                        <button class="delete-btn text-gray-400 hover:text-red-500 transition-colors p-1" data-timestamp="${tx.timestamp}">
+                            <svg class="w-6 h-6 " aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+</svg>
+
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', handleDeleteTransaction));
+        }
+
+        function renderChallenges(challenges) {
+            const listEl = document.getElementById('challengeList');
+            if (!challenges || challenges.length === 0) {
+                listEl.innerHTML = '<p class="text-center text-gray-500 py-4">คุณยังไม่ได้เข้าร่วม Challenge ใดๆ</p>';
+                return;
+            }
+
+            listEl.innerHTML = challenges.map(c => {
+                const progressPercent = Math.min((c.myProgress / c.goal) * 100, 100);
+                const endDate = new Date(c.endDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+                return `
+                    <div class="animate-fadeInUp">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <p class="font-semibold text-gray-700">${c.name}</p>
+                            <p class="text-sm text-gray-500">${c.myProgress.toLocaleString()} / ${c.goal.toLocaleString()} บ.</p>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-2.5 rounded-full" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <p class="text-xs text-right text-gray-400 mt-1">สิ้นสุด: ${endDate}</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function handleCreateGroupWallet() {
+            const { value: walletName } = await Swal.fire({
+                title: 'สร้างกระเป๋าเงินกลุ่มใหม่', input: 'text', inputLabel: 'ชื่อกระเป๋ากลุ่ม',
+                inputPlaceholder: 'เช่น ทริปญี่ปุ่น, กองกลางออฟฟิศ', showCancelButton: true,
+                confirmButtonText: 'สร้างกลุ่ม', cancelButtonText: 'ยกเลิก',
+                inputValidator: (value) => !value && 'กรุณาใส่ชื่อกระเป๋า'
+            });
+
+            if (walletName) {
+                Swal.fire({ title: 'กำลังสร้างกลุ่ม...', didOpen: () => Swal.showLoading() });
+                try {
+                    const profile = await liff.getProfile();
+                    const body = new URLSearchParams({ action: 'createGroupWallet', userId: profile.userId, creatorName: profile.displayName, walletName });
+                    const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                    const resData = await response.json();
+                    if (!resData.success) throw new Error(resData.error);
+
+                    await fetchAndRenderData(profile.userId);
+                    Swal.close();
+                    await shareGroupInvite(resData.data.groupId, walletName);
+                } catch (error) {
+                    Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถสร้างกลุ่มได้: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function handleJoinGroup(groupId) {
+            Swal.fire({ title: 'กำลังเข้าร่วมกลุ่ม...', didOpen: () => Swal.showLoading() });
+            try {
+                const profile = await liff.getProfile();
+                const body = new URLSearchParams({ action: 'joinGroupWallet', userId: profile.userId, displayName: profile.displayName, groupId });
+                const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                const resData = await response.json();
+                if (!resData.success) throw new Error(resData.error);
+
+                Swal.fire('สำเร็จ!', resData.data.message, 'success');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                await fetchAndRenderData(profile.userId);
+            } catch (error) {
+                Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถเข้าร่วมได้: ${error.message}`, 'error');
+            }
+        }
+
+        async function shareGroupInvite(groupId, groupName) {
+            if (!liff.isApiAvailable('shareTargetPicker')) return;
+            const profile = await liff.getProfile();
+            const message = {
+                type: 'flex', altText: `${profile.displayName} ชวนคุณเข้าร่วมกระเป๋าเงินกลุ่ม!`,
+                contents: {
+                    type: 'bubble', hero: { type: 'image', url: 'https://i.pinimg.com/736x/70/99/26/709926ae5fde92d66801b76bc2272840.jpg', size: 'full', aspectRatio: '20:13', aspectMode: 'cover' },
+                    body: {
+                        type: 'box', layout: 'vertical', spacing: 'md', contents: [
+                            { type: 'text', text: 'คำเชิญเข้าร่วมกลุ่ม', weight: 'bold', size: 'xl', color: '#3b82f6' },
+                            { type: 'text', text: `"${groupName}"`, weight: 'bold', size: 'lg', margin: 'md' },
+                            { type: 'text', text: `${profile.displayName} ชวนคุณมาใช้กระเป๋าเงินร่วมกัน`, 'wrap': true, 'color': '#666666', 'size': 'sm', 'margin': 'lg' }
+                        ]
+                    },
+                    footer: {
+                        type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+                            { type: 'button', style: 'primary', color: '#3b82f6', height: 'sm', action: { type: 'uri', label: 'เข้าร่วมกลุ่ม', uri: `https://liff.line.me/${LIFF_ID}?action=joinGroup&id=${groupId}` } }
+                        ]
+                    }
+                }
+            };
+            await liff.shareTargetPicker([message]);
+        }
+
+        async function handleShare() {
+            if (!liff.isApiAvailable('shareTargetPicker')) return;
+            const profile = await liff.getProfile();
+            const balance = userData.summary?.balance || 0;
+            let flexMessage;
+
+            if (balance > 0) {
+                flexMessage = {
+                    type: 'flex', altText: `${profile.displayName} อวดผลการออมเงิน!`,
+                    contents: {
+                        type: 'bubble', hero: { type: 'image', url: 'https://i.pinimg.com/736x/59/16/90/591690aa32490cf63a7abcabff3d85b6.jpg', size: 'full', aspectRatio: '20:13', aspectMode: 'cover' },
+                        body: {
+                            type: 'box', layout: 'vertical', spacing: 'md', contents: [
+                                { type: 'text', text: 'สุดยอดไปเลย!', weight: 'bold', size: 'xl', color: '#10B981' },
+                                {
+                                    type: 'box', layout: 'vertical', margin: 'md', contents: [
+                                        { type: 'text', text: `เดือนนี้ ${profile.displayName} ออมเงินได้`, 'wrap': true, 'color': '#666666', 'size': 'sm', flex: 0 },
+                                        { type: 'text', text: `${balance.toLocaleString('th-TH')} บาท!`, 'wrap': true, 'color': '#10B981', 'size': 'lg', 'weight': 'bold', 'margin': 'sm' }
+                                    ]
+                                },
+                                { type: 'text', text: 'มาเริ่มวางแผนการเงินกับ Wallet iton5 กันเถอะ', 'wrap': true, 'color': '#666666', 'size': 'sm', 'margin': 'md' }
+                            ]
+                        },
+                        footer: {
+                            type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+                                { type: 'button', style: 'primary', color: '#10B981', height: 'sm', action: { type: 'uri', label: 'เริ่มออมเงินแบบนี้บ้าง', uri: `https://line.me/R/ti/p/@818vujfa` } }
+                            ]
+                        }
+                    }
+                };
+            } else {
+                flexMessage = {
+                    type: 'flex', altText: `${profile.displayName} ชวนคุณมาใช้ Wallet iton5`,
+                    contents: {
+                        type: 'bubble', hero: { type: 'image', url: 'https://i.pinimg.com/736x/17/14/41/17144109291fc721707a51367db9020e.jpg', size: 'full', aspectRatio: '20:13', aspectMode: 'cover' },
+                        body: {
+                            type: 'box', layout: 'vertical', contents: [
+                                { type: 'text', text: 'เริ่มวางแผนการเงินวันนี้!', weight: 'bold', size: 'xl' },
+                                { type: 'text', text: `${profile.displayName} ชวนคุณมาใช้ Wallet Bot เพื่อบันทึกรายรับ-รายจ่าย และดูสรุปผลได้ง่ายๆ ผ่าน LINE`, 'wrap': true, 'color': '#666666', 'size': 'sm', 'margin': 'md' }
+                            ]
+                        },
+                        footer: {
+                            type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+                                { type: 'button', style: 'primary', color: '#3b82f6', height: 'sm', action: { type: 'uri', label: 'เพิ่มเพื่อนและเริ่มใช้งาน', uri: `https://line.me/R/ti/p/@818vujfa` } }
+                            ]
+                        }
+                    }
+                };
+            }
+            await liff.shareTargetPicker([flexMessage]);
+        }
+
+        async function handleViewGroupWallet(event) {
+            const { groupId, groupName } = event.currentTarget.dataset;
+            Swal.fire({ title: `กำลังโหลดข้อมูลกลุ่ม ${groupName}...`, didOpen: () => Swal.showLoading() });
+            try {
+                const profile = await liff.getProfile();
+                const response = await fetch(`${API_URL}?action=getGroupWalletDetails&userId=${profile.userId}&groupId=${groupId}`);
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+
+                const details = result.data;
+                const settlementHtml = details.settlement.length > 0
+                    ? details.settlement.map(s => `<p>${s.from} ➡️ ${s.to}|🟰 ${s.amount.toLocaleString('th-TH', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+})} บ.</p>`).join('')
+                    : '<p class="text-green-600 font-semibold">เคลียร์ค่าใช้จ่ายเรียบร้อย!</p>';
+
+                const transactionsHtml = details.transactions.length > 0
+                    ? details.transactions.map(tx => `
+                        <div class="flex justify-between items-center py-1.5 border-b last:border-0">
+                            <span class="text-gray-600">${tx.description}</span>
+                            <span class="font-semibold">${tx.amount.toLocaleString()} บ.</span>
+                        </div>`).join('')
+                    : '<p>ยังไม่มีรายการในกลุ่มนี้</p>';
+
+                Swal.fire({
+                    title: `สรุปกลุ่ม: ${groupName}`,
+                    html: `
+                        <div class="text-left space-y-4">
+                            <div>
+                                <h3 class="font-bold text-lg border-b pb-2 mb-2">ใครต้องจ่ายใคร?</h3>
+                                <div class="text-sm space-y-1">${settlementHtml}</div>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg border-b pb-2 mb-2">สมาชิก (${details.members.length} คน)</h3>
+                                <div class="text-sm text-gray-700">${details.members.map(m => m.displayName).join(', ')}</div>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg border-b pb-2 mb-2">รายการล่าสุดในกลุ่ม</h3>
+                                <div class="text-sm space-y-1 max-h-40 overflow-y-auto">${transactionsHtml}</div>
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'ปิด'
+                });
+            } catch (error) {
+                Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถโหลดข้อมูลกลุ่มได้: ${error.message}`, 'error');
+            }
+        }
+
+        async function handleDeleteTransaction(event) {
+            const button = event.currentTarget;
+            const timestamp = button.dataset.timestamp;
+            const profile = await liff.getProfile();
+            event.stopPropagation();
+
+            const result = await Swal.fire({
+                title: 'ยืนยันการลบ?', text: "คุณจะไม่สามารถกู้คืนรายการนี้ได้!", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6b7280',
+                confirmButtonText: 'ใช่, ลบเลย!', cancelButtonText: 'ยกเลิก'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'กำลังลบ...', didOpen: () => Swal.showLoading() });
+                try {
+                    const body = new URLSearchParams({ action: 'deleteTransaction', userId: profile.userId, timestamp });
+                    const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                    const resData = await response.json();
+                    if (!resData.success) throw new Error(resData.error);
+
+                    Swal.fire('ลบสำเร็จ!', 'รายการของคุณถูกลบแล้ว', 'success');
+                    await fetchAndRenderData(profile.userId);
+                } catch (error) {
+                    Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถลบได้: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function handleCreateChallenge() {
+            const profile = await liff.getProfile();
+            Swal.fire({
+                title: 'สร้าง Challenge ใหม่',
+                html: `
+                      <div class="swal-custom-form space-y-4">
+                        <div>
+                            <label for="swal-challenge-name">ชื่อ Challenge</label>
+                            <input id="swal-challenge-name" class="swal-input" placeholder="เช่น เก็บเงินเที่ยวญี่ปุ่น">
+                        </div>
+                        <div>
+                            <label for="swal-challenge-amount">เป้าหมาย (บาท)</label>
+                            <input id="swal-challenge-amount" type="number" class="swal-input" placeholder="50000">
+                        </div>
+                        <div>
+                            <label for="swal-challenge-date">สิ้นสุดวันที่</label>
+                            <input id="swal-challenge-date" type="date" class="swal-input">
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'สร้างและชวนเพื่อน',
+                focusConfirm: false,
+                preConfirm: () => ({
+                    name: document.getElementById('swal-challenge-name').value,
+                    amount: document.getElementById('swal-challenge-amount').value,
+                    endDate: document.getElementById('swal-challenge-date').value,
+                })
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const formData = result.value;
+                    if (!formData.name || !formData.amount || !formData.endDate) {
+                        Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูล Challenge ให้ครบถ้วน', 'error');
+                        return;
+                    }
+
+                    Swal.fire({ title: 'กำลังสร้าง Challenge...', didOpen: () => Swal.showLoading() });
+
+                    try {
+                        const body = new URLSearchParams({
+                            action: 'createChallenge',
+                            userId: profile.userId,
+                            creatorName: profile.displayName,
+                            name: formData.name,
+                            amount: formData.amount,
+                            endDate: formData.endDate
+                        });
+                        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                        const resData = await response.json();
+                        if (!resData.success) throw new Error(resData.error);
+
+                        await fetchAndRenderData(profile.userId);
+                        Swal.close();
+
+                        await shareChallenge(resData.data.challengeId, formData.name, formData.amount);
+
+                    } catch (error) {
+                        Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถสร้าง Challenge ได้: ${error.message}`, 'error');
+                    }
+                }
+            });
+        }
+
+        async function shareChallenge(challengeId, challengeName, challengeAmount) {
+            if (!liff.isApiAvailable('shareTargetPicker')) return;
+            const profile = await liff.getProfile();
+            const message = {
+                type: 'flex',
+                altText: `${profile.displayName} ท้าคุณมาดวลออมเงิน!`,
+                contents: {
+                    type: 'bubble',
+                    hero: { type: 'image', url: 'https://i.pinimg.com/736x/c9/42/94/c942947f0ce91f4d6db6ea017482fc37.jpg', size: 'full', aspectRatio: '20:13', aspectMode: 'cover' },
+                    body: {
+                        type: 'box', layout: 'vertical', spacing: 'md', contents: [
+                            { type: 'text', text: 'คำท้าดวลออมเงิน!', weight: 'bold', size: 'xl', color: '#F59E0B' },
+                            { type: 'text', text: `"${challengeName}"`, weight: 'bold', size: 'lg', margin: 'md' },
+                            { type: 'text', text: `เป้าหมาย: ${parseInt(challengeAmount).toLocaleString()} บาท`, size: 'md', margin: 'sm' },
+                            { type: 'text', text: `${profile.displayName} ท้าให้คุณมาแข่งกันเก็บเงินให้ถึงเป้าหมาย!`, 'wrap': true, 'color': '#666666', 'size': 'sm', 'margin': 'lg' }
+                        ]
+                    },
+                    footer: {
+                        type: 'box', layout: 'vertical', spacing: 'sm', contents: [
+                            { type: 'button', style: 'primary', color: '#F59E0B', height: 'sm', action: { type: 'uri', label: 'รับคำท้า!', uri: `https://liff.line.me/${LIFF_ID}?action=joinChallenge&id=${challengeId}` } }
+                        ]
+                    }
+                }
+            };
+            await liff.shareTargetPicker([message]);
+        }
+
+        async function handleJoinChallenge(challengeId) {
+            Swal.fire({ title: 'กำลังเข้าร่วม Challenge...', didOpen: () => Swal.showLoading() });
+            try {
+                const profile = await liff.getProfile();
+                const body = new URLSearchParams({
+                    action: 'joinChallenge',
+                    userId: profile.userId,
+                    displayName: profile.displayName,
+                    challengeId: challengeId
+                });
+                const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                const resData = await response.json();
+                if (!resData.success) throw new Error(resData.error);
+
+                Swal.fire('สำเร็จ!', resData.data.message, 'success');
+                window.history.replaceState({}, document.title, window.location.pathname);
+                await fetchAndRenderData(profile.userId);
+
+            } catch (error) {
+                Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถเข้าร่วมได้: ${error.message}`, 'error');
+            }
+        }
+
+        document.getElementById('addTransactionBtn').addEventListener('click', async () => {
+            const profile = await liff.getProfile();
+            const personalWallets = userData.wallets?.personal || [];
+            const groupWallets = userData.wallets?.group || [];
+
+            const walletOptionsHtml = [
+                ...personalWallets.map(w => `<option value="${w.name}|personal">${w.name} (ส่วนตัว)</option>`),
+                ...groupWallets.map(w => `<option value="${w.name}|${w.groupId}">[กลุ่ม] ${w.name}</option>`)
+            ].join('');
+
+            Swal.fire({
+                title: 'เพิ่มรายการใหม่',
+                html: `
+                   <div class="swal-custom-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="swal-type">ประเภท</label>
+                                <select id="swal-type" class="swal-select"><option value="รายจ่าย" selected>รายจ่าย</option><option value="รายรับ">รายรับ</option></select>
+                            </div>
+                            <div class="input-with-icon">
+                                <label for="swal-description">รายการ</label>
+                                <span class="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg></span>
+                                <input id="swal-description" class="swal-input" placeholder="เช่น ค่ากาแฟ, เงินเดือน">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="input-with-icon">
+                                    <label for="swal-amount">จำนวนเงิน</label>
+                                     <span class="icon">฿</span>
+                                    <input id="swal-amount" type="number" class="swal-input" placeholder="0.00">
+                                </div>
+                                <div class="input-with-icon">
+                                    <label for="swal-category">หมวดหมู่</label>
+                                    <span class="icon"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h2zm0 0l-2.293-2.293a1 1 0 010-1.414l.001-.001a1 1 0 011.414 0L7 1.586zM7 15h.01M7 11h5a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2h2zm0 0l-2.293-2.293a1 1 0 010-1.414l.001-.001a1 1 0 011.414 0L7 9.586z"></path></svg></span>
+                                    <input id="swal-category" class="swal-input" placeholder="เช่น อาหาร" >
+                                </div>
+                            </div>
+                            <div>
+                                <label for="swal-wallet">กระเป๋าเงิน</label>
+                                <select id="swal-wallet" class="swal-select">${walletOptionsHtml || '<option value="เงินสด|personal">เงินสด (ส่วนตัว)</option>'}</select>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: 'บันทึก',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const [walletName, groupIdOrType] = document.getElementById('swal-wallet').value.split('|');
+                    return {
+                        type: document.getElementById('swal-type').value,
+                        description: document.getElementById('swal-description').value,
+                        amount: document.getElementById('swal-amount').value,
+                        category: document.getElementById('swal-category').value,
+                        walletName: walletName,
+                        groupId: groupIdOrType.startsWith('grp_') ? groupIdOrType : ''
+                    }
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const formData = result.value;
+                    if (!formData.description || !formData.amount || !formData.category) {
+                        Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกรายการและจำนวนเงิน', 'error');
+                        return;
+                    }
+                    Swal.fire({ title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading() });
+                    try {
+                        const body = new URLSearchParams({ action: 'addTransaction', userId: profile.userId, ...formData });
+                        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+                        const resData = await response.json();
+                        if (!resData.success) throw new Error(resData.error);
+                      
+                        const Toast = Swal.mixin({
+                        toast: true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.onmouseenter = Swal.stopTimer;
+                            toast.onmouseleave = Swal.resumeTimer;
+                        }
+                    });
+                    Toast.fire({
+                        icon: "success",
+                        title: "บันทึกรายการเรียบร้อยแล้ว"
+                    });
+
+
+                        await fetchAndRenderData(profile.userId);
+                    } catch (error) {
+                        Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถบันทึกข้อมูลได้: ${error.message}`, 'error');
+                    }
+                }
+            });
+        });
+      
+       const message = "ไม่อนุญาตให้คลิกขวาครับ";
+
+  document.addEventListener("contextmenu", function (e) {
+    Swal.fire('Oh!', message, 'error');
+   
+    e.preventDefault();
+  });
+
+  document.addEventListener("mousedown", function (e) {
+    if (e.button === 2 || e.button === 1) {
+      Swal.fire('Oh!', message, 'error');
+    
+      e.preventDefault();
+    }
+  });
+
+    </script>
+</body>
+
+</html>
