@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สะสมเพื่อน แลกรางวัล</title>
+    <meta name="description" content="Friend Collector for LIFF App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="Friend Collector-T42-thailand" />
+    <meta property="og:description" content="Friend Collector for LIFF App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1j4CfKOX5jL_yd-HUy3gU8MkqcpZrD3y4" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://bit.ly/fontiton5" type="text/css" charset="utf-8" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+
+        :root {
+            --primary-glow: #00ffff;
+            --secondary-glow: #ff00ff;
+            --epic-glow: #fde047;
+            --dark-bg: #0d0520;
+            --card-bg: rgba(22, 11, 64, 0.5);
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+        }
+
+        body {
+            font-family: 'line_seed_sans_th';
+               background-color: var(--dark-bg);
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,0) 0.5px),
+                radial-gradient(white, rgba(255,255,255,0) 0.5px);
+            background-size: 50px 50px, 70px 70px;
+            background-position: 0 0, 35px 35px;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+
+        .main-container { min-height: 100vh; }
+
+        .cyber-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--primary-glow);
+            border-radius: 1rem;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3), inset 0 0 10px rgba(0, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(transparent, rgba(255,0,255,0.2), transparent 30%);
+            animation: rotate-glow 8s linear infinite;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--header-color);
+            text-shadow: 0 0 5px var(--primary-glow), 0 0 10px var(--secondary-glow);
+        }
+
+        .progress-bar-container { background: rgba(0, 0, 0, 0.5); border-radius: 9999px; overflow: hidden; border: 1px solid rgba(0,255,255,0.3); }
+        .progress-bar { background: linear-gradient(90deg, var(--secondary-glow), var(--primary-glow)); transition: width 0.5s ease-in-out; }
+        
+        .reward-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            border-radius: 1rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: card-fade-in 0.5s ease-out forwards;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .reward-card.unlocked {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            cursor: pointer;
+        }
+        .reward-card.unlocked:hover { transform: scale(1.03); }
+        .reward-card.locked .lock-icon { display: flex; }
+        .reward-card.unlocked .lock-icon { display: none; }
+        .reward-card.locked .reward-image { filter: grayscale(100%) brightness(0.5); }
+        
+        .btn {
+            border-radius: 9999px;
+            font-weight: bold;
+            padding: 1rem 1rem;
+            font-size: 1.125rem;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .btn:disabled {
+            cursor: not-allowed;
+            filter: grayscale(80%);
+            opacity: 0.6;
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, var(--secondary-glow), var(--primary-glow));
+            color: var(--dark-bg);
+            box-shadow: 0 0 15px var(--secondary-glow), 0 0 25px var(--primary-glow);
+        }
+        .btn-secondary { 
+            background-color: transparent; 
+            color: var(--primary-glow);
+            border-color: var(--primary-glow);
+        }
+        .btn:not(:disabled):hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 0 25px var(--secondary-glow), 0 0 40px var(--primary-glow);
+        }
+        .btn:not(:disabled):active {
+            animation: click-glitch 0.3s ease-out;
+        }
+
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .spinner {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--primary-glow);
+            border-right-color: var(--secondary-glow);
+            animation: spin 1s linear infinite;
+        }
+        
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 50px 1fr auto;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid transparent;
+            border-bottom: 1px solid rgba(0,255,255,0.2);
+            transition: all 0.3s ease;
+            animation: card-fade-in 0.5s ease-out forwards; 
+            opacity: 0;
+            margin-bottom: 0.5rem; 
+        }
+        .leaderboard-row:last-child {
+            margin-bottom: 0;
+        }
+        .leaderboard-row:hover {
+            background: rgba(0,255,255,0.1);
+        }
+        .leaderboard-rank {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 0 0 5px;
+        }
+        .leaderboard-name {
+            font-weight: 500;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .leaderboard-score {
+            font-size: 1.125rem;
+            font-weight: 700;
+            text-align: right;
+            color: var(--primary-glow);
+        }
+        .leaderboard-row.rank-1, .leaderboard-row.rank-2, .leaderboard-row.rank-3 {
+            border-color: var(--epic-glow);
+            background: linear-gradient(90deg, rgba(253, 224, 71, 0.1), transparent);
+        }
+        .leaderboard-row.is-self {
+            border-color: var(--secondary-glow);
+            background: linear-gradient(90deg, rgba(255, 0, 255, 0.2), transparent);
+        }
+        .leaderboard-rank.rank-1 { color: #FFD700; }
+        .leaderboard-rank.rank-2 { color: #C0C0C0; }
+        .leaderboard-rank.rank-3 { color: #CD7F32; }
+
+        
+        .achievement-item {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 0.5rem; cursor: pointer; transition: transform 0.2s ease;
+            padding-top: 0.5rem;
+        }
+        .achievement-item:hover { transform: translateY(-5px); }
+        .achievement-icon-wrapper {
+            width: 64px; height: 72px; display: flex; justify-content: center; align-items: center;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: all 0.3s ease;
+        }
+        .achievement-icon-wrapper.unlocked {
+            background: linear-gradient(145deg, var(--epic-glow), #f59e0b);
+            animation: achievement-glow 2s infinite alternate;
+        }
+        .achievement-icon-wrapper.locked { background: rgba(0, 0, 0, 0.5); border: 1px dashed rgba(0,255,255,0.3); }
+        .achievement-icon { font-size: 2rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+        .achievement-name { font-size: 0.75rem; font-weight: 500; text-align: center; width: 100%; }
+        .achievement-name.locked { color: rgba(255,255,255,0.5); }
+        
+        .swiper-button-next, .swiper-button-prev { color: var(--primary-glow); --swiper-navigation-size: 30px; }
+
+        .swal2-popup { border-radius: 1rem !important; background: var(--dark-bg) !important; color: var(--text-color) !important; border: 2px solid var(--primary-glow) !important; box-shadow: 0 0 30px var(--secondary-glow) !important; }
+        .swal2-title { color: var(--header-color) !important; text-shadow: 0 0 5px var(--primary-glow); }
+        .swal2-html-container { color: var(--text-color) !important; }
+        .swal2-confirm { border-radius: 9999px !important; background: linear-gradient(90deg, var(--secondary-glow), var(--primary-glow)) !important; color: var(--dark-bg) !important; font-weight: bold !important; text-transform: uppercase !important; }
+       
+        #supply-drop-animation {
+            width: 150px;
+            height: 150px;
+            background-image: url('https://img.icons8.com/plasticine/100/box.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            animation: shake-box 1s ease-in-out infinite;
+        }
+        .swal2-rarity-Common { border-color: #9ca3af !important; box-shadow: 0 0 20px #9ca3af !important; }
+        .swal2-rarity-Rare { border-color: var(--primary-glow) !important; box-shadow: 0 0 30px var(--primary-glow) !important; }
+        .swal2-rarity-Epic { border-color: var(--epic-glow) !important; box-shadow: 0 0 40px var(--epic-glow) !important; }
+
+
+        @keyframes rotate-glow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes click-glitch {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(2px, -2px) scale(1.02); text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+            50% { transform: translate(-2px, 2px) scale(1); text-shadow: -2px 0 #f0f, 2px 0 #0ff; }
+            75% { transform: translate(2px, 2px) scale(1.02); text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        @keyframes card-fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes achievement-glow {
+            from { box-shadow: 0 0 5px var(--epic-glow); }
+            to { box-shadow: 0 0 20px #f59e0b; }
+        }
+        @keyframes shake-box {
+            0%, 100% { transform: translateX(0) rotate(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) rotate(-2deg); }
+            20%, 40%, 60%, 80% { transform: translateX(5px) rotate(2deg); }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900">
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="main-container flex items-center justify-center p-4">
+        <div id="app-content" class="w-full max-w-md hidden">
+
+            <div class="cyber-card p-6 mb-8 text-center">
+                <img id="user-picture" src="https://placehold.co/80x80/e2e8f0/e2e8f0"
+                    class="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-cyan-400 p-1"
+                    style="box-shadow: 0 0 15px var(--primary-glow);">
+                <h1 id="user-name" class="text-2xl font-bold text-white">กำลังโหลด...</h1>
+                <p id="referrer-info" class="text-fuchsia-400 text-sm mt-1 h-5"></p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+
+                <div class="cyber-card p-4 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-center text-cyan-300">ภารกิจประจำวัน</h3>
+                        <p id="mission-description" class="text-center my-2 h-10 flex items-center justify-center">
+                            กำลังโหลดภารกิจ...</p>
+                    </div>
+                    <button id="mission-claim-button" class="btn btn-secondary w-full mt-2">ทำภารกิจ</button>
+                </div>
+
+                <div class="cyber-card p-4 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-center text-fuchsia-400">กล่องสุ่ม</h3>
+                        <div class="text-center my-2">
+                            <span class="text-sm">ตั๋วสุ่มของคุณ</span>
+                            <p id="ticket-count" class="text-3xl font-bold text-white">0</p>
+                        </div>
+                    </div>
+                    <button id="open-supply-drop-button" class="btn btn-primary w-full mt-2">เปิด (x1)</button>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="section-title text-center mb-4">🎖️ เหรียญตราเกียรติยศ</h2>
+                <div class="cyber-card p-4 relative">
+                    <div class="swiper achievement-carousel">
+                        <div class="swiper-wrapper" id="achievements-carousel-wrapper"></div>
+                    </div>
+                    <div class="swiper-button-prev"></div>
+                    <div class="swiper-button-next"></div>
+                </div>
+            </div>
+
+            <div class="cyber-card p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-3 text-center text-white">ความคืบหน้าของคุณ</h2>
+                <div class="flex justify-between items-center mb-2">
+                    <span><i class="fas fa-users mr-2 text-cyan-400"></i>เพื่อนของคุณ</span>
+                    <span id="friend-count" class="font-bold text-lg text-white">0 / 0</span>
+                </div>
+                <div class="progress-bar-container w-full h-3">
+                    <div id="progress-bar" class="progress-bar h-full" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="section-title text-center mb-4">ปลดล็อกของรางวัล</h2>
+                <div id="rewards-list" class="space-y-4"></div>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="section-title text-center mb-4">🏆 อันดับนักชวนเพื่อน</h2>
+                <div id="leaderboard-list" class="cyber-card p-4 space-y-2"></div>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="section-title text-center mb-4">👥 รายชื่อเพื่อนที่คุณชวน</h2>
+                <div id="invited-list" class="cyber-card p-4 space-y-2"></div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 gap-4">
+                <button id="qr-code-button" class="btn btn-secondary">
+                    <i class="fas fa-qrcode mr-2"></i> QR Code
+                </button>
+                <button id="share-button" class="btn btn-primary">
+                    <i class="fas fa-share-alt mr-2"></i> ชวนเพื่อน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+        const LIFF_ID = '2007748498-n5PyOmyk';
+        const API_URL = 'https://script.google.com/macros/s/AKfycby-RAvP5hOd_FnFrujZmiMrhHvB-ZwKyXNi0mgXWVvOpGS253y1PAf17TYJ6MXy36ZIOQ/exec';
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const appContent = document.getElementById('app-content');
+        const userPicture = document.getElementById('user-picture');
+        const userName = document.getElementById('user-name');
+        const referrerInfo = document.getElementById('referrer-info');
+        const achievementsWrapper = document.getElementById('achievements-carousel-wrapper');
+        const friendCountSpan = document.getElementById('friend-count');
+        const progressBar = document.getElementById('progress-bar');
+        const rewardsList = document.getElementById('rewards-list');
+        const leaderboardList = document.getElementById('leaderboard-list');
+        const invitedList = document.getElementById('invited-list');
+        const shareButton = document.getElementById('share-button');
+        const qrCodeButton = document.getElementById('qr-code-button');
+   
+        const missionDescriptionEl = document.getElementById('mission-description');
+        const missionClaimButton = document.getElementById('mission-claim-button');
+        const ticketCountEl = document.getElementById('ticket-count');
+        const openSupplyDropButton = document.getElementById('open-supply-drop-button');
+
+        let myUserId = '';
+        let achievementSwiper;
+        let currentMission = {};
+        let currentUserProfile = {}; 
+
+        async function main() {
+            try {
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                if (!liff.isLoggedIn()) { liff.login({ redirectUri: window.location.href }); return; }
+                const profile = await liff.getProfile();
+                myUserId = profile.userId;
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const referrerId = urlParams.get('ref');
+
+                const registerData = await apiCall('register', { userId: myUserId, displayName: profile.displayName, referrerId });
+                if (registerData && registerData.newlyUnlocked && registerData.newlyUnlocked.length > 0) {
+                    showNewlyUnlockedAchievements(registerData.newlyUnlocked);
+                }
+                     const friendship = await liff.getFriendship();
+                        if (!friendship.friendFlag) {
+                            Swal.fire({
+                            icon: 'error',
+                            title: 'เดี๋ยวก่อน!',
+                            text: 'คุณยังไม่ได้เป็นเพื่อนกับเรา',
+                            confirmButtonText: 'เพิ่มเพื่อน',
+                            }).then(() => {
+                            window.location = 'https://line.me/R/ti/p/@673vnegk';
+                            });
+                            return;
+                        }
+                await fetchAndRenderAllData();
+            } catch (error) {
+                console.error('LIFF Initialization failed', error);
+                showError('เกิดข้อผิดพลาดในการเริ่มต้นแอป');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function apiCall(action, params = {}) {
+            showLoadingOnClick();
+            const body = new URLSearchParams({ action, ...params });
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: body.toString(),
+                    mode: 'cors',
+                });
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const result = await response.json();
+                if (result.status === 'error') throw new Error(result.message);
+                return result.data;
+            } catch (error) {
+                console.error(`API call failed for action: ${action}`, error);
+                showError(`เกิดข้อผิดพลาด: ${error.message}`);
+                return null;
+            } finally {
+                hideLoadingOnClick();
+            }
+        }
+
+        async function fetchAndRenderAllData() {
+            const [userData, leaderboardData, referralData, invitedData] = await Promise.all([
+                apiCall('getUserData', { userId: myUserId }),
+                apiCall('getLeaderboard'),
+                apiCall('getReferralDetails', { userId: myUserId }),
+                apiCall('getInvitedUsers', { userId: myUserId })
+            ]);
+
+            if (userData) {
+                currentUserProfile = userData.profile; 
+                renderUI(userData);
+                renderAchievements(userData.allAchievements, userData.profile.unlockedAchievements);
+                renderMissionAndSupplyDrop(userData.profile);
+                if (userData.newlyUnlocked && userData.newlyUnlocked.length > 0) {
+                    showNewlyUnlockedAchievements(userData.newlyUnlocked);
+                }
+            }
+            if (leaderboardData) renderLeaderboard(leaderboardData);
+            if (referralData && referralData.referrerName) {
+                referrerInfo.innerHTML = `<i class="fas fa-user-plus mr-1"></i> ถูกชวนโดย: <strong>${referralData.referrerName}</strong>`;
+            }
+            if (invitedData) renderInvitedList(invitedData);
+        }
+
+        function renderUI(data) {
+            const { profile, rewards } = data;
+            
+            userName.innerText = profile.displayName;
+            liff.getProfile().then(p => {
+                userPicture.src = p.pictureUrl || 'https://placehold.co/80x80/e2e8f0/e2e8f0';
+                if (profile.inventory && profile.inventory.profile_frames && profile.inventory.profile_frames.includes('cyber_frame')) {
+                    userPicture.style.borderColor = 'var(--secondary-glow)';
+                    userPicture.style.boxShadow = '0 0 25px var(--secondary-glow)';
+                }
+            });
+
+            const maxFriends = Math.max(...rewards.map(r => r.friendsRequired), 1);
+            friendCountSpan.innerText = `${profile.friendCount} / ${maxFriends} คน`;
+            const progressPercentage = Math.min((profile.friendCount / maxFriends) * 100, 100);
+            progressBar.style.width = `${progressPercentage}%`;
+
+            rewardsList.innerHTML = '';
+            rewards.sort((a, b) => a.friendsRequired - b.friendsRequired).forEach((reward, index) => {
+                const card = document.createElement('div');
+                card.className = `reward-card p-4 flex items-center space-x-4 ${reward.unlocked ? 'unlocked' : 'locked'}`;
+                card.style.animationDelay = `${index * 100}ms`;
+                card.innerHTML = `
+                    <div class="relative w-20 h-20 flex-shrink-0">
+                        <img src="${reward.imageUrl || 'https://placehold.co/80x80/64748b/ffffff?text=Reward'}" alt="${reward.rewardName}" class="reward-image w-full h-full rounded-lg object-cover">
+                        <div class="lock-icon absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center rounded-lg"><i class="fas fa-lock text-3xl text-white"></i></div>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-lg text-white">${reward.rewardName}</h3>
+                        <p class="text-sm text-cyan-300">ต้องการ: ${reward.friendsRequired} คน</p>
+                    </div>
+                    ${reward.unlocked 
+                        ? `<div class="text-cyan-400 font-bold flex flex-col items-center"><i class="fas fa-check-circle text-2xl mb-1"></i><span>ปลดล็อกแล้ว</span></div>`
+                        : `<div class="text-gray-400 font-bold">${profile.friendCount}/${reward.friendsRequired}</div>`
+                    }
+                `;
+                if (reward.unlocked) {
+                    card.addEventListener('click', () => showRewardDetails(reward));
+                }
+                rewardsList.appendChild(card);
+            });
+        }
+
+        function renderMissionAndSupplyDrop(profile) {
+            currentMission = profile.dailyMission;
+            missionDescriptionEl.textContent = currentMission.description || "โหลดข้อมูลล้มเหลว";
+            ticketCountEl.textContent = profile.dataTickets || 0;
+
+            if (currentMission.completed) {
+                missionClaimButton.textContent = "สำเร็จแล้ว";
+                missionClaimButton.disabled = true;
+            } else {
+                missionClaimButton.textContent = "ทำภารกิจ";
+                missionClaimButton.disabled = false;
+            }
+
+            openSupplyDropButton.disabled = (profile.dataTickets < 1);
+        }
+        
+        function renderAchievements(allAchievements, unlockedIds) {
+            achievementsWrapper.innerHTML = '';
+            if (!allAchievements) return;
+
+            allAchievements.forEach(ach => {
+                const isUnlocked = unlockedIds.includes(ach.id);
+                const slide = document.createElement('div');
+                slide.className = 'swiper-slide';
+
+                const item = document.createElement('div');
+                item.className = 'achievement-item';
+
+                const iconWrapper = document.createElement('div');
+                iconWrapper.className = `achievement-icon-wrapper ${isUnlocked ? 'unlocked' : 'locked'}`;
+                
+                const icon = document.createElement('span');
+                icon.className = 'achievement-icon';
+                icon.textContent = isUnlocked ? ach.icon : '?';
+                
+                const name = document.createElement('div');
+                name.className = `achievement-name ${isUnlocked ? '' : 'locked'}`;
+                name.textContent = isUnlocked ? ach.name : '???';
+
+                iconWrapper.appendChild(icon);
+                item.appendChild(iconWrapper);
+                item.appendChild(name);
+                
+                item.addEventListener('click', () => showAchievementDetails(ach, isUnlocked));
+                
+                slide.appendChild(item);
+                achievementsWrapper.appendChild(slide);
+            });
+
+            initAchievementCarousel();
+        }
+
+        function renderLeaderboard(leaderboardData) {
+            leaderboardList.innerHTML = '';
+            if (!leaderboardData || leaderboardData.length === 0) {
+                leaderboardList.innerHTML = `<p class="text-center text-gray-400">ยังไม่มีข้อมูลการจัดอันดับ</p>`;
+                return;
+            }
+
+            leaderboardData.forEach((user, index) => {
+                const rank = index + 1;
+                const isSelf = user.userId === myUserId;
+                
+                const item = document.createElement('div');
+                item.className = `leaderboard-row ${isSelf ? 'is-self' : ''}`;
+                if (rank <= 3) {
+                    item.classList.add(`rank-${rank}`);
+                }
+                item.style.animationDelay = `${index * 70}ms`;
+
+                const rankEl = document.createElement('div');
+                rankEl.className = 'leaderboard-rank';
+                if (rank <= 3) {
+                    const icons = ['🥇', '🥈', '🥉'];
+                    rankEl.innerHTML = icons[index];
+                    rankEl.classList.add(`rank-${rank}`);
+                } else {
+                    rankEl.innerHTML = `#${rank}`;
+                }
+                
+                const nameEl = document.createElement('div');
+                nameEl.className = 'leaderboard-name';
+                nameEl.textContent = user.displayName;
+
+                const scoreEl = document.createElement('div');
+                scoreEl.className = 'leaderboard-score';
+                scoreEl.innerHTML = `${user.friendCount} <span class="text-xs text-fuchsia-400">คน</span>`;
+                
+                item.appendChild(rankEl);
+                item.appendChild(nameEl);
+                item.appendChild(scoreEl);
+                
+                leaderboardList.appendChild(item);
+            });
+        }
+        
+        function renderInvitedList(invitedData) {
+            invitedList.innerHTML = '';
+            if (!invitedData || invitedData.length === 0) {
+                invitedList.innerHTML = `<p class="text-center text-gray-400">คุณยังไม่ได้ชวนใครเลย!</p>`;
+                return;
+            }
+            invitedData.forEach((user, index) => {
+                const item = document.createElement('div');
+                item.className = 'invited-item p-2 flex items-center bg-black bg-opacity-20 rounded-md';
+                item.style.animationDelay = `${index * 70}ms`;
+                item.innerHTML = `
+                    <i class="fas fa-satellite-dish text-cyan-400 text-lg w-8 text-center"></i>
+                    <span class="flex-1 font-medium truncate px-2 text-white">${user.displayName}</span>
+                `;
+                invitedList.appendChild(item);
+            });
+        }
+        
+        missionClaimButton.addEventListener('click', async () => {
+            const result = await apiCall('completeMission', { userId: myUserId, actionType: 'login' });
+            if (result && result.status === 'success') {
+                missionClaimButton.textContent = "สำเร็จแล้ว";
+                missionClaimButton.disabled = true;
+                ticketCountEl.textContent = result.newTicketCount;
+                openSupplyDropButton.disabled = (result.newTicketCount < 1);
+                Swal.fire({ icon: 'success', title: 'ภารกิจสำเร็จ!', text: result.message });
+            } else if (result && result.status === 'already_completed') {
+                Swal.fire({ icon: 'info', title: 'สำเร็จแล้ว', text: 'คุณทำภารกิจของวันนี้สำเร็จแล้ว' });
+            }
+        });
+
+        openSupplyDropButton.addEventListener('click', async () => {
+            try {
+                await Swal.fire({
+                    title: 'กำลังเปิดกล่องสุ่ม...',
+                   html: '<center><div id="supply-drop-animation"></div></center>',
+                    showConfirmButton: false,
+                    timer: 2500,
+                    allowOutsideClick: false,
+                });
+
+                const result = await apiCall('openSupplyDrop', { userId: myUserId });
+
+                if (result) {
+                    ticketCountEl.textContent = result.newTicketCount;
+                    openSupplyDropButton.disabled = (result.newTicketCount < 1);
+
+                    await Swal.fire({
+                        title: `คุณได้รับ: ${result.name}`,
+                        html: `<p>${result.description}</p><p class="font-bold mt-4" style="color: var(--${result.rarity === 'Epic' ? 'epic' : result.rarity === 'Rare' ? 'primary' : 'text'}-glow);">ระดับ: ${result.rarity}</p>`,
+                        customClass: {
+                            popup: `swal2-rarity-${result.rarity}`
+                        },
+                        confirmButtonText: 'รับทราบ',
+                    });
+                    fetchAndRenderAllData();
+                }
+
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        shareButton.addEventListener('click', async () => {
+            if (currentMission && !currentMission.completed) {
+                const missionResult = await apiCall('completeMission', { userId: myUserId, actionType: 'share' });
+                if (missionResult && missionResult.status === 'success') {
+                     missionClaimButton.textContent = "สำเร็จแล้ว";
+                     missionClaimButton.disabled = true;
+                     ticketCountEl.textContent = missionResult.newTicketCount;
+                     openSupplyDropButton.disabled = (missionResult.newTicketCount < 1);
+                     Swal.fire({ icon: 'success', title: 'ภารกิจสำเร็จ!', text: missionResult.message });
+                }
+            }
+
+            if (!liff.isInClient()) { showError('ฟังก์ชันนี้ใช้ได้เฉพาะในแอป LINE เท่านั้น'); return; }
+            showLoadingOnClick();
+             try {
+                const shareUrl = `https://liff.line.me/${LIFF_ID}?ref=${myUserId}`;
+
+                await liff.shareTargetPicker(
+                    [{
+                        "type": "flex",
+                        "altText": "มีภารกิจใหม่ส่งมาถึงคุณ!",
+                        "contents": {
+                            "type": "bubble",
+                            "size": "giga",
+                            "hero": {
+                                "type": "image",
+                                "url": "https://i.pinimg.com/1200x/2d/de/c1/2ddec18ff02ec8f3662ee25e1d6d19c5.jpg",
+                                "size": "full",
+                                "aspectRatio": "20:13",
+                                "aspectMode": "cover"
+                            },
+                            "body": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "paddingAll": "20px",
+                                "spacing": "md",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "ภารกิจ: FRIEND COLLECTOR",
+                                        "weight": "bold",
+                                        "size": "xl",
+                                        "color": "#FFFFFF",
+                                        "align": "center",
+                                        "wrap": true
+                                    },
+                                    {
+                                        "type": "separator",
+                                        "margin": "lg",
+                                        "color": "#00ffff"
+                                    },
+                                    {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "margin": "lg",
+                                        "spacing": "sm",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "มาช่วยฉันสะสมเพื่อนเพื่อปลดล็อกรางวัลกันเถอะ! คลิกเลย",
+                                                "wrap": true,
+                                                "color": "#e0e0e0",
+                                                "size": "sm",
+                                                "align": "center"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            "footer": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "contents": [
+                                    {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "action": {
+                                            "type": "uri",
+                                            "label": "เข้าร่วมภารกิจ",
+                                            "uri": shareUrl
+                                        },
+                                        "height": "50px",
+                                        "cornerRadius": "25px",
+                                        "justifyContent": "center",
+                                        "background": {
+                                            "type": "linearGradient",
+                                            "angle": "0deg",
+                                            "startColor": "#ff00ff",
+                                            "endColor": "#00ffff"
+                                        },
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": "🚀 เข้าร่วมภารกิจ",
+                                                "color": "#FFFFFF",
+                                                "align": "center",
+                                                "weight": "bold",
+                                                "size": "md"
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "paddingAll": "20px",
+                                "backgroundColor": "#0d0520"
+                            },
+                            "styles": {
+                                "body": {
+                                    "backgroundColor": "#0d0520"
+                                },
+                                "footer": {
+                                    "separator": false
+                                }
+                            }
+                        }
+                    }]
+                )
+                    .then(function (res) {
+                        if (res) {
+                            Swal.fire({ icon: 'success', title: 'แชร์สำเร็จ!', text: 'ขอบคุณที่ชวนเพื่อนมาร่วมสนุก!' });
+                        } else {
+
+                            console.log("TargetPicker was closed!");
+                        }
+                    })
+                    .catch(function (error) {
+
+                        console.log("something wrong happen");
+                    });
+            } catch (error) {
+                if (error.code !== 'CANCEL') { showError('ไม่สามารถแชร์ได้: ' + error.message); }
+            } finally {
+                hideLoadingOnClick();
+            }
+        });
+
+        qrCodeButton.addEventListener('click', () => {
+            const shareUrl = `https://liff.line.me/${LIFF_ID}?ref=${myUserId}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`;
+            
+            Swal.fire({
+                title: 'สแกนเพื่อชวนเพื่อน',
+                html: `
+                    <div class="flex justify-center p-4 bg-white rounded-lg">
+                        <img src="${qrApiUrl}" alt="QR Code" width="200" height="200">
+                    </div>
+                    <p class="mt-4 text-sm">ให้เพื่อนสแกน QR Code นี้เพื่อลงทะเบียน</p>
+                `,
+                confirmButtonText: 'ปิด',
+            });
+        });
+
+        function initAchievementCarousel() {
+            if (achievementSwiper) {
+                achievementSwiper.destroy(true, true);
+            }
+            achievementSwiper = new Swiper('.achievement-carousel', {
+                slidesPerView: 3,
+                spaceBetween: 10,
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                breakpoints: {
+                    375: { slidesPerView: 4, spaceBetween: 10 },
+                    640: { slidesPerView: 5, spaceBetween: 15 },
+                },
+            });
+        }
+        
+        function showNewlyUnlockedAchievements(newlyUnlocked) {
+            newlyUnlocked.forEach((ach, index) => {
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'ปลดล็อกเหรียญตรา!',
+                        html: `
+                            <div class="text-7xl mb-4" style="animation: achievement-glow 2s infinite alternate;">${ach.icon}</div>
+                            <h3 class="text-2xl font-bold" style="color: var(--epic-glow); text-shadow: 0 0 10px var(--secondary-glow);">${ach.name}</h3>
+                            <p class="mt-2">${ach.description}</p>
+                        `,
+                        showConfirmButton: true,
+                        confirmButtonText: 'เยี่ยมไปเลย!',
+                        timer: 5000,
+                        timerProgressBar: true,
+                        position: 'center',
+                    });
+                }, index * 1000);
+            });
+        }
+        function showAchievementDetails(ach, isUnlocked) {
+            Swal.fire({
+                title: isUnlocked ? ach.name : 'เหรียญตราที่ซ่อนอยู่',
+                html: `
+                    <div class="flex justify-center">
+                        <div class="achievement-icon-wrapper ${isUnlocked ? 'unlocked' : 'locked'}" style="width: 80px; height: 90px; animation: ${isUnlocked ? 'achievement-glow 2s infinite alternate' : 'none'};">
+                           <span class="achievement-icon" style="font-size: 2.5rem;">${isUnlocked ? ach.icon : '?'}</span>
+                        </div>
+                    </div>
+                    <p class="mt-4 text-xl">${ach.description}</p>
+                    <p class="mt-4 font-bold ${isUnlocked ? 'text-cyan-400' : 'text-gray-400'}">
+                        ${isUnlocked ? '<i class="fas fa-check-circle mr-2"></i>คุณปลดล็อกแล้ว!' : '<i class="fas fa-times-circle mr-2"></i>ยังไม่ปลดล็อก'}
+                    </p>
+                `,
+                confirmButtonText: 'ปิด',
+            });
+        }
+        function showRewardDetails(reward) {
+            const isRedeemed = currentUserProfile.redeemedRewards.includes(reward.rewardId);
+            
+            let footerHtml = '';
+            if (isRedeemed) {
+                footerHtml = `<div class="mt-4 p-3 bg-gray-700 rounded-lg text-center"><p class="font-bold text-lg text-gray-400"><i class="fas fa-check-double mr-2"></i>ใช้สิทธิ์แล้ว</p></div>`;
+            } else {
+                footerHtml = `<button id="redeem-button" class="btn btn-primary w-full mt-4">กดใช้รางวัล</button>`;
+            }
+
+            Swal.fire({
+                title: reward.rewardName,
+                html: `
+                    <img src="${reward.imageUrl}" alt="${reward.rewardName}" class="w-full max-w-xs mx-auto rounded-lg mb-4 border-2 border-cyan-400">
+                    <p class="mb-4 text-left">${reward.description}</p>
+                    <div class="p-3 bg-black bg-opacity-20 rounded-lg text-left border border-fuchsia-500">
+                        <h4 class="font-bold mb-1 text-fuchsia-400">วิธีรับรางวัล:</h4>
+                        <p>${reward.howToClaim}</p>
+                    </div>
+                    ${footerHtml}
+                `,
+                showConfirmButton: false,
+                willOpen: () => {
+                    if (!isRedeemed) {
+                        const redeemButton = document.getElementById('redeem-button');
+                        redeemButton.addEventListener('click', () => {
+                            Swal.fire({
+                                title: 'ยืนยันการใช้สิทธิ์',
+                                text: "โปรดยืนยันการใช้สิทธิ์ต่อหน้าพนักงาน",
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: 'ยืนยัน',
+                                cancelButtonText: 'ยกเลิก',
+                            }).then(async (result) => {
+                                if (result.isConfirmed) {
+                                    const redeemResult = await apiCall('redeemReward', { userId: myUserId, rewardId: reward.rewardId });
+                                    if (redeemResult && redeemResult.status === 'success') {
+                                        await Swal.fire('สำเร็จ!', 'ใช้สิทธิ์รางวัลเรียบร้อยแล้ว', 'success');
+                                        fetchAndRenderAllData(); // Refresh all data
+                                    } else {
+                                        showError('ไม่สามารถใช้สิทธิ์ได้');
+                                    }
+                                }
+                            });
+                        });
+                    }
+                }
+            });
+        }
+        function showLoading() {
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.visibility = 'visible';
+            appContent.classList.add('hidden');
+        }
+        function hideLoading() {
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.visibility = 'hidden';
+            appContent.classList.remove('hidden');
+        }
+        let clickLoadCount = 0;
+        function showLoadingOnClick() {
+            clickLoadCount++;
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.visibility = 'visible';
+        }
+        function hideLoadingOnClick() {
+            clickLoadCount--;
+            if (clickLoadCount <= 0) {
+                clickLoadCount = 0;
+                loadingOverlay.style.opacity = '0';
+                loadingOverlay.style.visibility = 'hidden';
+            }
+        }
+        function showError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: message,
+            });
+        }
+
+        window.onload = main;
+    </script>
+</body>
+</html>
