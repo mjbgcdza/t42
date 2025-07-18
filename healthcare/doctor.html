@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>จัดการผู้ป่วย (สำหรับแพทย์)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="description" content="จัดการผู้ป่วย (สำหรับแพทย์) for LIFF App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="จัดการผู้ป่วย (สำหรับแพทย์)-T42-thailand" />
+    <meta property="og:description" content="ระบบจัดการผู้ป่วย (สำหรับแพทย์) for LIFF App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/1Ms4fNBq5__DOhvBKAAb94-rUIjPjhjJ3" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://bit.ly/fontiton5" type="text/css" charset="utf-8" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * {
+            font-family: 'line_seed_sans_th';
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+        }
+
+        .gradient-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .floating-label {
+            position: relative;
+        }
+
+        .floating-label textarea,
+        .floating-label input {
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px 16px 8px 16px;
+            background: rgba(255, 255, 255, 0.9);
+            transition: all 0.3s ease;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        .floating-label textarea:focus,
+        .floating-label input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            background: white;
+        }
+
+        .floating-label label {
+            position: absolute;
+            left: 16px;
+            top: 20px;
+            color: #64748b;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            background: white;
+            padding: 0 4px;
+        }
+
+        .floating-label textarea:focus+label,
+        .floating-label textarea:not(:placeholder-shown)+label,
+        .floating-label input:focus+label,
+        .floating-label input:not(:placeholder-shown)+label {
+            top: -8px;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        .animate-scaleIn {
+            animation: scaleIn 0.4s ease-out forwards;
+        }
+
+        .medical-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+            color: white;
+            transition: opacity 0.3s ease;
+        }
+
+        .tab-btn {
+            @apply py-3 px-4 text-gray-500 font-semibold border-b-4 border-transparent transition-all duration-300;
+        }
+
+        .tab-btn.active {
+            @apply text-purple-600 border-purple-600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loading-overlay" class="hidden">
+        <div class="medical-spinner"></div>
+        <div id="loading-text" class="mt-6 text-center text-xl font-semibold"></div>
+    </div>
+
+    <div class="container mx-auto max-w-4xl p-4 md:p-6">
+
+        <div id="scan-view" class="min-h-screen flex items-center justify-center">
+            <div class="w-full max-w-md animate-scaleIn">
+                <div class="glass-card rounded-3xl p-8 text-center">
+                    <div
+                        class="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+
+                        <img src="https://lh3.googleusercontent.com/d/1Ck_OCfEW4dEp3A1k9yfQplYmW7qmwzFF" alt="Logo"
+                            class="w-full h-full rounded-full object-cover bg-white">
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">สวัสดี, <span
+                            id="doctor-display-name">คุณหมอ</span></h2>
+                    <p class="text-gray-600 mb-8">กรุณาสแกน QR Code เพื่อดูข้อมูลผู้ป่วย</p>
+                    <button id="scan-qr-btn"
+                        class="gradient-btn w-full text-white font-bold py-4 px-6 rounded-2xl shadow-lg text-lg">
+                        เริ่มสแกน
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="patient-view" class="hidden animate-fadeInUp">
+            <div class="glass-card rounded-3xl p-6 md:p-8 mb-6">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
+                    <div>
+                        <h2 id="patient-name" class="text-3xl font-bold text-gray-800"></h2>
+                        <div class="flex items-center space-x-4 text-gray-600 mt-2">
+                            <span>ID: <span id="patient-id" class="font-semibold"></span></span>
+                            <span>อายุ: <span id="patient-age" class="font-semibold"></span> ปี</span>
+                            <span>เพศ: <span id="patient-gender" class="font-semibold"></span></span>
+                        </div>
+                    </div>
+                    <button id="back-to-scan-btn"
+                        class="mt-4 md:mt-0 w-full md:w-auto bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded-xl hover:bg-gray-200 transition-colors">สแกนคนถัดไป</button>
+                </div>
+                <div class="border-t border-gray-200 pt-4 mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center"><svg class="w-5 h-5 mr-2 text-red-500"
+                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+                                clip-rule="evenodd" />
+                        </svg><strong>โรคประจำตัว:</strong><span id="patient-disease" class="ml-2"></span></div>
+                    <div class="flex items-center"><img id="patient-doctor-image" class="w-8 h-8 rounded-full mr-2"><svg
+                            class="w-5 h-5 mr-2 text-indigo-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path
+                                d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM1.088 13.361A2.5 2.5 0 013.5 11h3a2.5 2.5 0 012.412 2.361A6.002 6.002 0 0010 15a6.002 6.002 0 001.088-.639A2.5 2.5 0 0113.5 11h3a2.5 2.5 0 012.412 2.361A6.002 6.002 0 0010 15a6.002 6.002 0 00-8.912-1.639z" />
+                        </svg><strong>แพทย์ผู้ดูแล:</strong><span id="patient-doctor" class="ml-2"></span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-6">บันทึกการรักษาและนัดหมาย</h3>
+                    <form id="appointment-form" class="space-y-6">
+                        <div class="floating-label">
+                            <textarea id="doctor-notes" placeholder=" " rows="4"></textarea>
+                            <label for="doctor-notes">บันทึกการรักษา / หมายเหตุ</label>
+                        </div>
+                        <div class="floating-label">
+                            <input type="date" id="appointment-date" placeholder=" ">
+                            <label for="appointment-date">นัดหมายครั้งถัดไป</label>
+                        </div>
+                        <button type="submit"
+                            class="gradient-btn w-full text-white font-bold py-4 px-6 rounded-2xl shadow-lg text-lg">
+                            บันทึกข้อมูล
+                        </button>
+                    </form>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 md:p-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">ประวัติผู้ป่วย</h3>
+                    <div class="border-b border-gray-200 mb-4">
+                        <nav class="flex space-x-2">
+                            <button id="tab-appointments" class="tab-btn active">การนัดหมาย</button>
+                            <button id="tab-medications" class="tab-btn">รายการยา</button>
+                        </nav>
+                    </div>
+                    <div id="history-content-container" class="max-h-96 overflow-y-auto pr-2">
+                        <div id="appointments-content"></div>
+                        <div id="medications-content" class="hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbww4UnbY6_gLYdDkvIS-EQxCJgtlWx-3ya1YS4Q-ljcCCtX0RiIo6k6IMBW3jal1W74QA/exec';
+        const LIFF_ID = '2007778477-Jn482o2V';
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const scanView = document.getElementById('scan-view');
+        const patientView = document.getElementById('patient-view');
+        const scanBtn = document.getElementById('scan-qr-btn');
+        const backToScanBtn = document.getElementById('back-to-scan-btn');
+        const doctorDisplayName = document.getElementById('doctor-display-name');
+        const appointmentForm = document.getElementById('appointment-form');
+
+        let currentPatientId = null;
+        let doctorProfile = { displayName: 'คุณหมอ', userId: null };
+
+        function toggleLoading(show, text = 'กำลังประมวลผล...') {
+            loadingText.textContent = text;
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
+
+        async function initializeLiff() {
+            toggleLoading(true, 'กำลังเชื่อมต่อ...');
+            try {
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+                doctorProfile = await liff.getProfile();
+                doctorDisplayName.textContent = doctorProfile.displayName;
+                const friendship = await liff.getFriendship();
+                if (!friendship.friendFlag) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เดี๋ยวก่อน!',
+                        text: 'คุณยังไม่ได้เป็นเพื่อนกับเรา',
+                        confirmButtonText: 'เพิ่มเพื่อน',
+                    }).then(() => {
+                        window.location = 'https://line.me/R/ti/p/@542dytmv';
+                    });
+                    return;
+                }
+            } catch (error) {
+                console.error('LIFF Init failed:', error);
+                Swal.fire({ title: 'ข้อผิดพลาด', text: 'ไม่สามารถเริ่มต้น LIFF ได้', icon: 'error', confirmButtonColor: '#667eea' });
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function handleScan() {
+            if (!liff.isInClient()) {
+
+                const testPatientId = prompt("สำหรับทดสอบ: กรุณาใส่ Patient ID:");
+                if (testPatientId) await fetchAndDisplayPatient(testPatientId);
+                return;
+            }
+
+            toggleLoading(true, 'กำลังเปิดกล้อง...');
+            try {
+                const os = liff.getOS();
+                const result = os === 'android' ? await liff.scanCode() : await liff.scanCodeV2();
+                toggleLoading(false);
+
+                if (result && result.value) {
+                    const url = new URL(result.value);
+                    const patientId = url.searchParams.get('patientId');
+                    if (patientId) {
+                        await fetchAndDisplayPatient(patientId);
+                    } else {
+                        Swal.fire('QR Code ไม่ถูกต้อง', 'ไม่พบรหัสผู้ป่วยใน QR Code', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Scan failed:', error);
+                if (!error.code || error.code !== 'USER_CANCEL') {
+                    Swal.fire('สแกนล้มเหลว', error.message || 'เกิดข้อผิดพลาด', 'error');
+                }
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        async function fetchAndDisplayPatient(patientId) {
+            toggleLoading(true, 'กำลังดึงข้อมูลผู้ป่วย...');
+            try {
+                const response = await fetch(`${API_URL}?action=getPatientDetails&id=${patientId}`);
+                const result = await response.json();
+
+                if (result.status === 'success' && result.data.patientFound) {
+                    currentPatientId = patientId;
+                    const data = result.data;
+                    document.getElementById('patient-name').textContent = data.Name;
+                    document.getElementById('patient-id').textContent = data.PatientID;
+                    document.getElementById('patient-age').textContent = data.Age;
+                    document.getElementById('patient-gender').textContent = data.Gender;
+                    document.getElementById('patient-disease').textContent = data.UnderlyingDisease;
+                    document.getElementById('patient-doctor').textContent = data.AssignedDoctor;
+                    document.getElementById('patient-doctor-image').src = data.DoctorImage || 'https://placehold.co/100x100/E2E8F0/4A5568?text=N/A';
+
+                    renderHistory(data.appointments, data.medications);
+
+                    scanView.style.display = 'none';
+                    patientView.style.display = 'block';
+                } else {
+                    Swal.fire('ไม่พบข้อมูล', `ไม่พบข้อมูลผู้ป่วยสำหรับ ID: ${patientId}`, 'error');
+                }
+            } catch (error) {
+                console.error('Fetch patient data failed:', error);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลผู้ป่วยได้', 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        function renderHistory(appointments, medications) {
+            const appointmentsContent = document.getElementById('appointments-content');
+            const medicationsContent = document.getElementById('medications-content');
+
+            appointmentsContent.innerHTML = appointments.length > 0 ? appointments.map(appt => `
+                <div class="history-item">
+                    <p class="font-semibold text-gray-800">${new Date(appt.AppointmentDate).toLocaleDateString('th-TH', { dateStyle: 'full' })}</p>
+                    <p class="text-sm text-gray-600 mt-1">บันทึกโดย: ${appt.DoctorName || 'N/A'}</p>
+                    <p class="text-sm text-gray-700 bg-gray-50 p-2 rounded-md mt-2">หมายเหตุ: ${appt.DoctorNotes || '-'}</p>
+                </div>
+            `).join('') : '<p class="text-gray-500 text-center p-4">ไม่มีประวัติการนัดหมาย</p>';
+
+            medicationsContent.innerHTML = medications.length > 0 ? medications.map(med => `
+                <div class="history-item">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-gray-800">${med.MedName}</p>
+                            <p class="text-sm text-gray-600">ขนาด: ${med.Dosage}</p>
+                        </div>
+                        <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">เวลา: ${med.Time}</div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-gray-500 text-center p-4">ไม่มียาในรายการ</p>';
+        }
+
+        async function handleSaveAppointment(event) {
+            event.preventDefault();
+            const notes = document.getElementById('doctor-notes').value;
+            const date = document.getElementById('appointment-date').value;
+
+            if (!date) {
+                Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกวันนัดหมาย', 'warning');
+                return;
+            }
+
+            toggleLoading(true, 'กำลังบันทึกข้อมูล...');
+
+            const payload = {
+                action: 'addAppointment',
+                payload: { patientId: currentPatientId, appointmentDate: date, doctorNotes: notes, doctorName: doctorProfile.displayName }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    toggleLoading(false);
+                    await Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', showConfirmButton: false, timer: 1500 });
+                    appointmentForm.reset();
+
+                    document.querySelectorAll('.floating-label label').forEach(label => label.style.top = '20px');
+                    await fetchAndDisplayPatient(currentPatientId);
+                } else {
+                    throw new Error(result.message || 'An unknown API error occurred.');
+                }
+            } catch (error) {
+                console.error('Save appointment failed:', error);
+                Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถบันทึกข้อมูลได้: ${error.message}`, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const contents = {
+                'tab-appointments': document.getElementById('appointments-content'),
+                'tab-medications': document.getElementById('medications-content')
+            };
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    Object.values(contents).forEach(c => c.classList.add('hidden'));
+                    contents[tab.id].classList.remove('hidden');
+                });
+            });
+        }
+
+        scanBtn.addEventListener('click', handleScan);
+        backToScanBtn.addEventListener('click', () => {
+            patientView.style.display = 'none';
+            scanView.style.display = 'flex';
+            currentPatientId = null;
+            appointmentForm.reset();
+        });
+        appointmentForm.addEventListener('submit', handleSaveAppointment);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeLiff();
+            setupTabs();
+            document.getElementById('appointment-date').min = new Date().toISOString().split("T")[0];
+        });
+
+        const message = "ไม่อนุญาตให้คลิกขวาครับ";
+
+        document.addEventListener("contextmenu", function (e) {
+            Swal.fire('Oh!', message, 'error');
+
+            e.preventDefault();
+        });
+
+        document.addEventListener("mousedown", function (e) {
+            if (e.button === 2 || e.button === 1) {
+                Swal.fire('Oh!', message, 'error');
+
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+
+</html>
