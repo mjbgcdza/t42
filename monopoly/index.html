@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly: Economic Warfare</title>
+    <meta name="description" content="Monopoly: Economic Warfare" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="Monopoly: Economic Warfare" />
+    <meta property="og:description" content="Monopoly: Economic Warfare for LIFF App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lh3.googleusercontent.com/d/19TOULPPxEhfBWIjO9MmVhaUhcjGwGR5c" />
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link rel="stylesheet" href="https://bit.ly/fontiton5" type="text/css" charset="utf-8" />
+    <style>
+        :root {
+            --bg-dark: #1F2937;
+            --bg-light: #374151;
+            --primary: #38BDF8;
+            --secondary: #F472B6;
+            --accent: #FBBF24;
+            --text-light: #F9FAFB;
+            --text-dark: #111827;
+        }
+
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes modal-fade-in {
+            from {
+                background-color: rgba(0, 0, 0, 0);
+            }
+
+            to {
+                background-color: rgba(17, 24, 39, 0.8);
+            }
+        }
+
+        @keyframes modal-slide-in {
+            from {
+                transform: scale(0.9) translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes dice-roll {
+            0% {
+                transform: rotateY(0deg) rotateX(0deg);
+            }
+
+            100% {
+                transform: rotateY(720deg) rotateX(720deg);
+            }
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        @keyframes glowing-border {
+            0% {
+                box-shadow: 0 0 8px var(--primary);
+            }
+
+            50% {
+                box-shadow: 0 0 25px var(--primary), 0 0 35px var(--primary);
+            }
+
+            100% {
+                box-shadow: 0 0 8px var(--primary);
+            }
+        }
+
+        body {
+            font-family: 'line_seed_sans_th';
+            margin: 0;
+            color: var(--text-light);
+            background: linear-gradient(-45deg, #111827, #1F2937, #374151, #4B5563);
+            background-size: 400% 400%;
+            animation: gradient-animation 20s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(8px);
+            color: white;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 9999;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .wrapper-grid {
+            --animation-duration: 2.1s;
+            --cube-color: rgba(255, 255, 255, 0.05);
+            --highlight-color: var(--accent);
+            --cube-width: 48px;
+            --cube-height: 48px;
+            --font-size: 1.8em;
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(7, var(--cube-width));
+            grid-gap: 0;
+            width: calc(7 * var(--cube-width));
+            height: var(--cube-height);
+            perspective: 350px;
+            font-family: "line_seed_sans_th";
+            font-size: var(--font-size);
+            font-weight: 800;
+            color: transparent;
+        }
+
+        .cube {
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .face {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: var(--cube-width);
+            height: var(--cube-height);
+            background-color: var(--cube-color);
+        }
+
+        .face-left,
+        .face-right,
+        .face-back,
+        .face-front {
+            box-shadow: inset 0 0 2px 1px #0001, inset 0 0 12px 1px #fff1;
+        }
+
+        .face-front {
+            transform: rotateY(0deg) translateZ(calc(var(--cube-width) / 2));
+        }
+
+        .face-back {
+            transform: rotateY(180deg) translateZ(calc(var(--cube-width) / 2));
+            opacity: 0.6;
+        }
+
+        .face-left {
+            transform: rotateY(-90deg) translateZ(calc(var(--cube-width) / 2));
+            opacity: 0.6;
+        }
+
+        .face-right {
+            transform: rotateY(90deg) translateZ(calc(var(--cube-width) / 2));
+            opacity: 0.6;
+        }
+
+        .face-top {
+            height: var(--cube-width);
+            transform: rotateX(90deg) translateZ(calc(var(--cube-width) / 2));
+            opacity: 0.8;
+        }
+
+        .face-bottom {
+            height: var(--cube-width);
+            transform: rotateX(-90deg) translateZ(calc(var(--cube-height) - var(--cube-width) * 0.5));
+            opacity: 0.8;
+        }
+
+        .cube:nth-child(1) {
+            z-index: 0;
+            animation-delay: 0s;
+        }
+
+        .cube:nth-child(2) {
+            z-index: 1;
+            animation-delay: 0.2s;
+        }
+
+        .cube:nth-child(3) {
+            z-index: 2;
+            animation-delay: 0.4s;
+        }
+
+        .cube:nth-child(4) {
+            z-index: 3;
+            animation-delay: 0.6s;
+        }
+
+        .cube:nth-child(5) {
+            z-index: 2;
+            animation-delay: 0.8s;
+        }
+
+        .cube:nth-child(6) {
+            z-index: 1;
+            animation-delay: 1s;
+        }
+
+        .cube:nth-child(7) {
+            z-index: 0;
+            animation-delay: 1.2s;
+        }
+
+        .cube {
+            animation: translate-z var(--animation-duration) ease-in-out infinite;
+        }
+
+        .cube .face {
+            animation: face-color var(--animation-duration) ease-in-out infinite, edge-glow var(--animation-duration) ease-in-out infinite;
+            animation-delay: inherit;
+        }
+
+        .cube .face.face-front {
+            animation: face-color var(--animation-duration) ease-in-out infinite, face-glow var(--animation-duration) ease-in-out infinite, edge-glow var(--animation-duration) ease-in-out infinite;
+            animation-delay: inherit;
+        }
+
+        @keyframes translate-z {
+
+            0%,
+            40%,
+            100% {
+                transform: translateZ(-2px);
+            }
+
+            30% {
+                transform: translateZ(16px) translateY(-1px);
+            }
+        }
+
+        @keyframes face-color {
+
+            0%,
+            50%,
+            100% {
+                background-color: var(--cube-color);
+            }
+
+            10% {
+                background-color: var(--highlight-color);
+            }
+        }
+
+        @keyframes face-glow {
+
+            0%,
+            50%,
+            100% {
+                color: #fff0;
+                filter: none;
+            }
+
+            30% {
+                color: #fff;
+                filter: drop-shadow(0 14px 10px var(--highlight-color));
+            }
+        }
+
+        @keyframes edge-glow {
+
+            0%,
+            40%,
+            100% {
+                box-shadow: inset 0 0 2px 1px #0001, inset 0 0 12px 1px #fff1;
+            }
+
+            30% {
+                box-shadow: 0 0 2px 0px var(--highlight-color);
+            }
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #lobby-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        #lobby-screen h1 {
+            font-size: 2.8rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        .lobby-input {
+            width: 80%;
+            max-width: 400px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .lobby-btn {
+            width: 85%;
+            max-width: 420px;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            transition: all 0.2s;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .lobby-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .lobby-btn:active {
+            animation: pop 0.2s ease;
+            transform: scale(0.98);
+        }
+
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .player-info-bar {
+            display: flex;
+            justify-content: center;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .player-display {
+            background: var(--bg-light);
+            padding: 5px 10px;
+            border-radius: 8px;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 5px solid;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-display img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .player-display.active {
+            transform: scale(1.05);
+            animation: glowing-border 2s ease-in-out infinite;
+        }
+
+        .board-container {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        .game-board {
+            display: grid;
+            gap: 6px;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .space {
+            background-color: var(--bg-light);
+            border-radius: 8px;
+            position: relative;
+            font-size: 9px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            overflow: hidden;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-bottom: 4px solid rgba(0, 0, 0, 0.3);
+            min-height: 80px;
+        }
+
+        .space:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent);
+            z-index: 20;
+        }
+
+        .space-color {
+            width: 100%;
+            height: 12px;
+            flex-shrink: 0;
+        }
+
+        .space-name {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+            font-weight: 500;
+        }
+
+        .space-price {
+            font-weight: bold;
+            padding-bottom: 4px;
+            color: var(--accent);
+        }
+
+        .space .fa-solid {
+            font-size: 30px;
+            margin-top: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .owner-indicator {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid white;
+            display: none;
+        }
+
+        .owner-indicator.show {
+            display: block;
+        }
+
+        .space-position {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .player-token {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+            object-fit: cover;
+        }
+
+        #board-path-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        #board-path {
+            stroke-width: 4px;
+            fill: none;
+            stroke: url(#path-gradient);
+            stroke-dasharray: 10 5;
+            stroke-linecap: round;
+        }
+
+
+        .control-panel {
+            padding: 15px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        #dice-container {
+            display: flex;
+            gap: 15px;
+        }
+
+        .dice {
+            width: 55px;
+            height: 55px;
+            background: var(--text-light);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            box-shadow: inset 0 -4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .dice.rolling {
+            animation: dice-roll 0.7s ease-out;
+        }
+
+        #roll-btn {
+            padding: 15px 35px;
+            background: linear-gradient(45deg, var(--accent), #f39c12);
+            color: var(--text-dark);
+            border-radius: 10px;
+            border: none;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #roll-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            color: #999;
+        }
+
+        #turn-indicator {
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: modal-fade-in 0.3s ease;
+        }
+
+        .modal-content {
+            background: var(--bg-light);
+            color: var(--text-light);
+            padding: 0;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 380px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: modal-slide-in 0.4s ease-out;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            padding: 15px;
+            text-align: center;
+        }
+
+        .modal-color-bar {
+            height: 15px;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .modal-header h2 {
+            margin: 10px 0 0 0;
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .modal-body {
+            padding: 0 20px 20px 20px;
+        }
+
+        .modal-body p {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            background: var(--bg-dark);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.8rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #chance-card-overlay {
+            perspective: 1000px;
+        }
+
+        .chance-card-container {
+            width: 280px;
+            height: 400px;
+        }
+
+        .chance-card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        .chance-card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card-front {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            font-size: 8rem;
+        }
+
+        .card-back {
+            background: var(--bg-light);
+            transform: rotateY(180deg);
+            padding: 20px;
+            text-align: center;
+        }
+
+        #chance-card-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        #chance-card-text {
+            font-size: 1.4rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="wrapper-grid">
+            <div class="cube">
+                <div class="face face-front">L</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">O</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">A</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">D</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">I</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">N</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+            <div class="cube">
+                <div class="face face-front">G</div>
+                <div class="face face-back"></div>
+                <div class="face face-right"></div>
+                <div class="face face-left"></div>
+                <div class="face face-top"></div>
+                <div class="face face-bottom"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <linearGradient id="path-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:var(--primary);stop-opacity:1" />
+                <stop offset="100%" style="stop-color:var(--secondary);stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div class="game-container">
+
+        <div id="lobby-screen">
+            <h1>Monopoly<br>Economic Warfare</h1>
+            <p>สร้างห้อง หรือเข้าร่วมกับเพื่อน</p>
+            <input type="text" id="player-name" class="lobby-input" placeholder="ใส่ชื่อของคุณ">
+            <select id="player-career" class="lobby-input">
+                <option value="นักลงทุน">นักลงทุน</option>
+                <option value="โปรแกรมเมอร์">โปรแกรมเมอร์</option>
+                <option value="หมอ">หมอ</option>
+                <option value="ศิลปิน">ศิลปิน</option>
+            </select>
+            <input type="text" id="room-id-input" class="lobby-input" placeholder="ใส่รหัสห้อง (ถ้ามี)">
+            <button id="join-btn" class="lobby-btn">เข้าร่วมห้อง</button>
+            <button id="create-btn" class="lobby-btn">สร้างห้องใหม่</button>
+        </div>
+
+
+        <div id="game-screen">
+            <div id="player-info-bar" class="player-info-bar"></div>
+            <div class="board-container">
+                <div class="game-board" id="game-board">
+                    <svg id="board-path-svg">
+                        <path id="board-path" d=""></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="control-panel">
+                <div id="dice-container">
+                    <div id="dice1" class="dice">?</div>
+                    <div id="dice2" class="dice">?</div>
+                </div>
+                <div id="turn-indicator-container">
+                    <h2 id="turn-indicator">ตาของคุณ!</h2>
+                    <div id="room-id-display"></div>
+                </div>
+                <button id="roll-btn" class="lobby-btn">ทอยลูกเต๋า</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="position-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="modal-color-bar" class="modal-color-bar"></div>
+            <div class="modal-header">
+                <h2 id="modal-title">Title</h2>
+            </div>
+            <div class="modal-body">
+                <p id="modal-type">Type</p>
+                <p id="modal-price">Price</p>
+                <p id="modal-rent">Rent</p>
+                <p id="modal-owner">Owner</p>
+            </div>
+            <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+        </div>
+    </div>
+
+    <div id="chance-card-overlay" class="modal-overlay">
+        <div class="chance-card-container">
+            <div class="chance-card" id="chance-card">
+                <div class="card-face card-front">
+                    <i class="fa-solid fa-question"></i>
+                </div>
+                <div class="card-face card-back">
+                    <div id="chance-card-icon"></div>
+                    <p id="chance-card-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxDXaxw53vh2Q9NLSL1cCSRnbK31M3E1SOsF4ny7Dp9DAEqmEu7gdXsjKGVwH9IAdyP/exec";
+        const LIFF_ID = "2007783283-gr6JWpr7";
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const playerNameInput = document.getElementById('player-name');
+        const playerCareerSelect = document.getElementById('player-career');
+        const roomIdInput = document.getElementById('room-id-input');
+        const createBtn = document.getElementById('create-btn');
+        const joinBtn = document.getElementById('join-btn');
+        const gameBoard = document.getElementById('game-board');
+        const playerInfoBar = document.getElementById('player-info-bar');
+        const rollBtn = document.getElementById('roll-btn');
+        const dice1El = document.getElementById('dice1');
+        const dice2El = document.getElementById('dice2');
+        const roomIdDisplay = document.getElementById('room-id-display');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const positionModal = document.getElementById('position-modal');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const chanceCardOverlay = document.getElementById('chance-card-overlay');
+        const chanceCard = document.getElementById('chance-card');
+        const chanceCardText = document.getElementById('chance-card-text');
+        const chanceCardIcon = document.getElementById('chance-card-icon');
+
+        let gameState = {};
+        let currentUser = {};
+        let gameLoopInterval = null;
+        let winnerAnnounced = false;
+        const playerColors = ['#38BDF8', '#F472B6', '#34D399', '#FBBF24', '#A78BFA', '#F87171'];
+
+        window.onload = async () => {
+            try {
+                showLoading(true);
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+                const friendship = await liff.getFriendship();
+                if (!friendship.friendFlag) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'เดี๋ยวก่อน!',
+                        text: 'คุณยังไม่ได้เป็นเพื่อนกับเรา',
+                        confirmButtonText: 'เพิ่มเพื่อน',
+                    }).then(() => {
+                        window.location = 'https://line.me/R/ti/p/@263buhqj';
+                    });
+                    return;
+                }
+                const profile = await liff.getProfile();
+                currentUser.playerId = profile.userId;
+                currentUser.playerName = profile.displayName;
+                currentUser.pictureUrl = profile.pictureUrl;
+                playerNameInput.value = profile.displayName;
+                showLoading(false);
+            } catch (error) {
+                console.error("LIFF Init Error:", error);
+                showLoading(false);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับ LINE ได้', 'error');
+            }
+        };
+
+        window.addEventListener('resize', () => {
+            if (gameState.board) {
+                renderBoard(gameState.board);
+                updateUI(gameState);
+            }
+        });
+
+        createBtn.addEventListener('click', handleCreateRoom);
+        joinBtn.addEventListener('click', handleJoinRoom);
+        rollBtn.addEventListener('click', handleRollDice);
+        modalCloseBtn.addEventListener('click', hidePositionModal);
+        positionModal.addEventListener('click', (e) => {
+            if (e.target === positionModal) hidePositionModal();
+        });
+
+        function showLoading(isLoading) { loadingOverlay.classList.toggle('show', isLoading); }
+        function switchScreen(screenName) {
+            lobbyScreen.style.display = screenName === 'lobby' ? 'flex' : 'none';
+            gameScreen.style.display = screenName === 'game' ? 'flex' : 'none';
+            if (screenName === 'game') startGameLoop();
+            else stopGameLoop();
+        }
+
+        function renderBoard(boardData) {
+            gameBoard.innerHTML = '<svg id="board-path-svg"><path id="board-path" d=""></path></svg>';
+
+            const columns = window.innerWidth > 768 ? 10 : 5;
+            gameBoard.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+            const visualBoard = [];
+            const numRows = Math.ceil(boardData.length / columns);
+
+            for (let row = 0; row < numRows; row++) {
+                const rowItems = boardData.slice(row * columns, (row + 1) * columns);
+                if (row % 2 === 1) {
+                    rowItems.reverse();
+                }
+                visualBoard.push(...rowItems);
+            }
+
+            visualBoard.forEach((spaceInfo, index) => {
+                const space = document.createElement('div');
+                space.className = 'space';
+                space.id = `space-${spaceInfo.Position}`;
+
+                let content = `
+                    <div class="space-position">${spaceInfo.Position}</div>
+                    <div class="owner-indicator"></div>
+                    <div class="space-color" style="background-color: ${spaceInfo.Color || 'transparent'}"></div>
+                    <div class="space-name">${spaceInfo.Name}</div>
+                `;
+                if (spaceInfo.Price > 0) content += `<div class="space-price">${spaceInfo.Price} บ.</div>`;
+
+                if (spaceInfo.Type === 'Chance') content += '<i class="fa-solid fa-question"></i>';
+                if (spaceInfo.Type === 'Chest') content += '<i class="fa-solid fa-treasure-chest"></i>';
+                if (spaceInfo.Type === 'Tax') content += '<i class="fa-solid fa-hand-holding-dollar"></i>';
+                if (spaceInfo.Type === 'GO') content += '<i class="fa-solid fa-flag-checkered"></i>';
+                if (spaceInfo.Type === 'Jail') content += '<i class="fa-solid fa-gavel"></i>';
+                if (spaceInfo.Type === 'GoToJail') content += '<i class="fa-solid fa-person-running"></i>';
+                if (spaceInfo.Type === 'FreeParking') content += '<i class="fa-solid fa-car"></i>';
+
+                space.innerHTML = content;
+                space.addEventListener('click', () => showPositionModal(spaceInfo.Position));
+                gameBoard.appendChild(space);
+            });
+
+            setTimeout(() => {
+                const pathElement = document.getElementById('board-path');
+                if (!pathElement) return;
+
+                let pathData = '';
+                for (let i = 0; i < visualBoard.length - 1; i++) {
+                    const currentSpaceInfo = visualBoard[i];
+                    const nextSpaceInfo = visualBoard[i + 1];
+                    const space1 = document.getElementById(`space-${currentSpaceInfo.Position}`);
+                    const space2 = document.getElementById(`space-${nextSpaceInfo.Position}`);
+
+                    if (space1 && space2) {
+                        const x1 = space1.offsetLeft + space1.offsetWidth / 2;
+                        const y1 = space1.offsetTop + space1.offsetHeight / 2;
+                        const x2 = space2.offsetLeft + space2.offsetWidth / 2;
+                        const y2 = space2.offsetTop + space2.offsetHeight / 2;
+
+                        if (i === 0) pathData += `M ${x1} ${y1} `;
+                        pathData += `L ${x2} ${y2} `;
+                    }
+                }
+                pathElement.setAttribute('d', pathData);
+            }, 100);
+        }
+
+        function updateUI(state) {
+            const previousState = gameState;
+            gameState = state;
+
+            if (!previousState.room) {
+                renderBoard(state.board);
+            }
+
+            playerInfoBar.innerHTML = '';
+            state.players.forEach((p, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-display';
+                if (p.PlayerID === state.room.CurrentTurn) playerDiv.classList.add('active');
+                playerDiv.style.borderLeftColor = playerColors[index % playerColors.length];
+                playerDiv.innerHTML = `
+                    <img src="${p.PictureURL}" alt="${p.PlayerName}" onerror="this.src='https://placehold.co/28x28/ecf0f1/2c3e50?text=${p.PlayerName.charAt(0)}'">
+                    <div>
+                        <strong>${p.PlayerName.substring(0, 10)}</strong><br>
+                        <span>${p.Money} บ.</span>
+                    </div>`;
+                playerInfoBar.appendChild(playerDiv);
+            });
+
+            document.querySelectorAll('.player-token').forEach(t => t.remove());
+            state.players.forEach((p, index) => {
+                const token = document.createElement('img');
+                token.className = 'player-token';
+                token.src = p.PictureURL;
+                token.style.borderColor = playerColors[index % playerColors.length];
+                token.onerror = () => { token.src = `https://placehold.co/22x22/ecf0f1/2c3e50?text=${p.PlayerName.charAt(0)}`; };
+
+                const visualIndex = Array.from(gameBoard.children).findIndex(child => child.id === `space-${p.Position}`);
+                const spaceEl = gameBoard.children[visualIndex];
+
+                if (spaceEl) {
+                    const offset = index * 6 - (state.players.length * 2.5);
+                    token.style.left = `${spaceEl.offsetLeft + (spaceEl.offsetWidth / 2) - 14 + offset}px`;
+                    token.style.top = `${spaceEl.offsetTop + (spaceEl.offsetHeight / 2) - 14}px`;
+                    gameBoard.appendChild(token);
+                }
+            });
+
+            state.board.forEach(space => {
+                const spaceEl = document.getElementById(`space-${space.Position}`);
+                if (spaceEl) {
+                    const ownerIndicator = spaceEl.querySelector('.owner-indicator');
+                    if (space.OwnerID) {
+                        const ownerIndex = state.players.findIndex(p => p.PlayerID === space.OwnerID);
+                        if (ownerIndex !== -1) {
+                            ownerIndicator.style.backgroundColor = playerColors[ownerIndex % playerColors.length];
+                            ownerIndicator.classList.add('show');
+                        }
+                    } else {
+                        ownerIndicator.classList.remove('show');
+                    }
+                }
+            });
+
+            const isMyTurn = state.room.CurrentTurn === currentUser.playerId;
+            rollBtn.disabled = !isMyTurn || state.room.Status === 'Finished';
+            const currentTurnPlayer = state.players.find(p => p.PlayerID === state.room.CurrentTurn);
+            turnIndicator.textContent = isMyTurn ? "ถึงตาคุณแล้ว!" : `รอ ${currentTurnPlayer?.PlayerName || ''}...`;
+            roomIdDisplay.textContent = `Room ID: ${state.room.RoomID}`;
+
+
+            handleGameEvents(previousState, state);
+        }
+
+        function showPositionModal(positionId) {
+            const spaceData = gameState.board.find(s => s.Position == positionId);
+            if (!spaceData) return;
+
+            document.getElementById('modal-color-bar').style.backgroundColor = spaceData.Color || 'transparent';
+            document.getElementById('modal-title').textContent = spaceData.Name;
+            document.getElementById('modal-type').textContent = `ประเภท: ${spaceData.Type}`;
+
+            const priceEl = document.getElementById('modal-price');
+            const rentEl = document.getElementById('modal-rent');
+            const ownerEl = document.getElementById('modal-owner');
+
+            priceEl.style.display = 'none'; rentEl.style.display = 'none'; ownerEl.style.display = 'none';
+
+            if (spaceData.Type === 'Property' || spaceData.Type === 'Railroad' || spaceData.Type === 'Utility') {
+                priceEl.textContent = `ราคา: ${spaceData.Price} บ.`;
+                rentEl.textContent = `ค่าเช่า: ${spaceData.Rent} บ.`;
+                priceEl.style.display = 'block'; rentEl.style.display = 'block';
+                if (spaceData.OwnerID) {
+                    const owner = gameState.players.find(p => p.PlayerID === spaceData.OwnerID);
+                    ownerEl.textContent = `เจ้าของ: ${owner ? owner.PlayerName : '-'}`;
+                    ownerEl.style.display = 'block';
+                }
+            } else if (spaceData.Type === 'Tax') {
+                priceEl.textContent = `จ่ายภาษี: ${spaceData.Price} บ.`;
+                priceEl.style.display = 'block';
+            }
+
+            positionModal.classList.add('show');
+        }
+
+        function hidePositionModal() { positionModal.classList.remove('show'); }
+
+        async function apiCall(params) {
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST', mode: 'cors', cache: 'no-cache', redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(params)
+                });
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
+                const result = await response.json();
+                if (result.status === 'success') return result.data;
+                else throw new Error(result.message);
+            } catch (error) {
+                console.error("API Call Error:", error);
+                Swal.fire('เกิดข้อผิดพลาด', error.message, 'error');
+                return null;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function handleCreateRoom() {
+            const body = { action: 'createRoom', player: { ...currentUser, career: playerCareerSelect.value } };
+            const newState = await apiCall(body);
+            if (newState) { updateUI(newState); switchScreen('game'); }
+        }
+
+        async function handleJoinRoom() {
+            const roomId = roomIdInput.value.trim().toUpperCase();
+            if (!roomId) { Swal.fire('ผิดพลาด', 'กรุณาใส่รหัสห้อง', 'warning'); return; }
+            const body = { action: 'joinRoom', roomId: roomId, player: { ...currentUser, career: playerCareerSelect.value } };
+            const newState = await apiCall(body);
+            if (newState) { updateUI(newState); switchScreen('game'); }
+        }
+
+        async function handleRollDice() {
+            if (rollBtn.disabled) return;
+            const body = { action: 'rollDice', roomId: gameState.room.RoomID, playerId: currentUser.playerId };
+            const result = await apiCall(body);
+
+            if (result) {
+                dice1El.classList.add('rolling'); dice2El.classList.add('rolling');
+                setTimeout(() => {
+                    dice1El.textContent = result.diceRoll[0]; dice2El.textContent = result.diceRoll[1];
+                    dice1El.classList.remove('rolling'); dice2El.classList.remove('rolling');
+                    updateUI(result.newState);
+                    handleLandingAction(result);
+                }, 700);
+            }
+        }
+
+        function handleLandingAction(result) {
+            const player = result.newState.players.find(p => p.PlayerID === currentUser.playerId);
+            const space = result.newState.board.find(s => s.Position == player.Position);
+
+            Swal.fire({
+                title: 'ผลการเดิน!', html: result.eventMessage, icon: 'info',
+                // timer: 2500, timerProgressBar: true,
+            }).then(() => {
+                if (result.chanceCard) {
+                    showChanceCard(result.chanceCard);
+                } else {
+                    checkIfBuyable(player, space);
+                }
+            });
+        }
+
+        function showChanceCard(card) {
+            chanceCardText.textContent = card.CardText;
+            let iconClass = 'fa-solid ';
+            if (card.Action === 'ADD_MONEY') iconClass += 'fa-sack-dollar';
+            else if (card.Action === 'REMOVE_MONEY') iconClass += 'fa-file-invoice-dollar';
+            else if (card.Action === 'GOTO') iconClass += 'fa-shoe-prints';
+            chanceCardIcon.innerHTML = `<i class="${iconClass}"></i>`;
+
+            chanceCardOverlay.classList.add('show');
+            setTimeout(() => chanceCard.classList.add('is-flipped'), 100);
+
+            setTimeout(() => {
+                chanceCard.classList.remove('is-flipped');
+                setTimeout(() => {
+                    chanceCardOverlay.classList.remove('show');
+                    const updatedPlayer = gameState.players.find(p => p.PlayerID === currentUser.playerId);
+                    const updatedSpace = gameState.board.find(s => s.Position == updatedPlayer.Position);
+                    checkIfBuyable(updatedPlayer, updatedSpace);
+                }, 600);
+            }, 4000);
+        }
+
+        function checkIfBuyable(player, space) {
+            const isBuyable = (space.Type === 'Property' || space.Type === 'Railroad' || space.Type === 'Utility');
+            if (isBuyable && !space.OwnerID && player.Money >= space.Price) {
+                Swal.fire({
+                    title: `ซื้อ ${space.Name}?`, text: `ราคา: ${space.Price} บ.`,
+                    showDenyButton: true, confirmButtonText: 'ซื้อ', denyButtonText: `ไม่ซื้อ`, icon: 'question'
+                }).then((action) => { if (action.isConfirmed) handleBuyProperty(space.Position); });
+            }
+        }
+
+        async function handleBuyProperty(positionId) {
+            const body = { action: 'buyProperty', roomId: gameState.room.RoomID, playerId: currentUser.playerId, position: positionId };
+            const newState = await apiCall(body);
+            if (newState) {
+                updateUI(newState);
+                Swal.fire('ซื้อสำเร็จ!', 'คุณได้เป็นเจ้าของที่ดินนี้แล้ว', 'success');
+            }
+        }
+
+
+        function handleGameEvents(previousState, currentState) {
+            // Check for bankruptcy
+            const me = currentState.players.find(p => p.PlayerID === currentUser.playerId);
+            if (me && me.Money < 0) {
+                handleMyBankruptcy(me);
+            }
+
+            // Check for a winner
+            if (currentState.room.Status === 'Finished' && currentState.players.length === 1 && !winnerAnnounced) {
+                handleWinner(currentState.players[0]);
+            }
+        }
+
+        async function handleMyBankruptcy(player) {
+            await Swal.fire({
+                title: 'คุณล้มละลาย!',
+                text: 'เงินของคุณหมดแล้ว ทรัพย์สินทั้งหมดจะถูกโอนคืนสู่ธนาคาร',
+                icon: 'error',
+                allowOutsideClick: false
+            });
+            await sendBankruptcyMessage(player);
+            await apiCall({
+                action: 'playerBankrupt',
+                roomId: gameState.room.RoomID,
+                playerId: currentUser.playerId
+            });
+        }
+
+        function handleWinner(winner) {
+            winnerAnnounced = true;
+            rollBtn.disabled = true;
+            turnIndicator.innerHTML = `🎉 ผู้ชนะคือ ${winner.PlayerName}! 🎉`;
+            sendWinnerMessage(winner);
+            Swal.fire({
+                title: 'เกมจบแล้ว!',
+                html: `ขอแสดงความยินดีกับ <b>${winner.PlayerName}</b> ผู้เป็นสุดยอดนักลงทุน!`,
+                imageUrl: winner.PictureURL,
+                imageWidth: 150,
+                imageHeight: 150,
+                imageAlt: 'Winner photo'
+            });
+        }
+
+
+        async function sendFlexMessage(flexMessage) {
+            if (liff.isInClient()) {
+                try {
+                    await liff.sendMessages([flexMessage]);
+                } catch (error) {
+                    console.error("Error sending Flex Message:", error);
+                    Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถส่งข้อความประกาศผลได้', 'warning');
+                }
+            } else {
+                console.log("Not in LINE client, cannot send message.");
+            }
+        }
+
+        async function sendBankruptcyMessage(player) {
+            const flexMessage = {
+                "type": "flex",
+                "altText": `${player.PlayerName} ได้ล้มละลาย!`,
+                "contents": {
+                    "type": "bubble",
+                    "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "ประกาศ", "color": "#FFFFFF", "weight": "bold" }], "backgroundColor": "#EC4899" },
+                    "hero": { "type": "image", "url": player.PictureURL, "size": "md", "aspectRatio": "1:1", "aspectMode": "cover" },
+                    "body": {
+                        "type": "box", "layout": "vertical", "spacing": "md", "contents": [
+                            { "type": "text", "text": "ผู้เล่นล้มละลาย!", "size": "xl", "weight": "bold", "align": "center" },
+                            { "type": "text", "text": player.PlayerName, "align": "center", "size": "lg" },
+                            { "type": "text", "text": "ทรัพย์สินทั้งหมดถูกโอนคืนสู่ธนาคาร", "wrap": true, "align": "center", "color": "#AAAAAA" }
+                        ]
+                    }
+                }
+            };
+            await sendFlexMessage(flexMessage);
+        }
+
+        async function sendWinnerMessage(winner) {
+            const flexMessage = {
+                "type": "flex",
+                "altText": `ผู้ชนะคือ ${winner.PlayerName}!`,
+                "contents": {
+                    "type": "bubble",
+                    "header": { "type": "box", "layout": "vertical", "contents": [{ "type": "text", "text": "ประกาศผู้ชนะ", "color": "#FFFFFF", "weight": "bold" }], "backgroundColor": "#FBBF24" },
+                    "hero": { "type": "image", "url": winner.PictureURL, "size": "xl", "aspectRatio": "1:1", "aspectMode": "cover" },
+                    "body": {
+                        "type": "box", "layout": "vertical", "spacing": "md", "contents": [
+                            { "type": "text", "text": "THE WINNER IS", "size": "xl", "weight": "bold", "align": "center", "color": "#FBBF24" },
+                            { "type": "text", "text": winner.PlayerName, "align": "center", "size": "xxl", "weight": "bold" },
+                            { "type": "text", "text": `ด้วยทรัพย์สินรวม ${winner.Money} บ.`, "wrap": true, "align": "center", "color": "#AAAAAA" }
+                        ]
+                    }
+                }
+            };
+            await sendFlexMessage(flexMessage);
+        }
+
+
+        async function fetchGameState() {
+            if (!gameState.room?.RoomID) return;
+            try {
+                const response = await fetch(`${API_URL}?action=getGameState&roomId=${gameState.room.RoomID}`);
+                const result = await response.json();
+                if (result.status === 'success' && JSON.stringify(gameState) !== JSON.stringify(result.data)) {
+                    updateUI(result.data);
+                }
+            } catch (error) {
+                console.error("Fetch state error:", error);
+                stopGameLoop();
+            }
+        }
+
+        function startGameLoop() {
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(fetchGameState, 5000);
+        }
+        function stopGameLoop() { clearInterval(gameLoopInterval); }
+        const message = "ไม่อนุญาตให้คลิกขวาครับ";
+
+        document.addEventListener("contextmenu", function (e) {
+            Swal.fire('Oh!', message, 'error');
+
+            e.preventDefault();
+        });
+
+        document.addEventListener("mousedown", function (e) {
+            if (e.button === 2 || e.button === 1) {
+                Swal.fire('Oh!', message, 'error');
+
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+
+</html>
