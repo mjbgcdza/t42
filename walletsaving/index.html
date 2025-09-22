@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบออมเงิน - Wallet Saving</title>
+    <meta name="description" content="wallet for LIFF App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="wallet-T42-thailand" />
+    <meta property="og:description" content="wallet for LIFF App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U48c16d105f55ec3ad6a6b52f72142abd/1758561035670.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #f1f5f9; 
+        }
+        .swal2-popup {
+            border-radius: 1.5rem !important;
+            font-family: 'Prompt', sans-serif;
+        }
+        .swal2-confirm {
+             background: linear-gradient(135deg, #006992, #27476e) !important;
+             border-radius: 0.75rem !important;
+        }
+        
+        .sidebar { background: linear-gradient(180deg, #001d4a, #27476e); }
+        .primary-text { color: #006992; }
+        .secondary-text { color: #27476e; }
+        .accent-color { color: #eca400; }
+        .main-button { 
+            background: linear-gradient(135deg, #006992, #27476e);
+            transition: all 0.3s ease;
+        }
+        .main-button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(39, 71, 110, 0.3);
+        }
+        .card {
+            background-color: rgba(234, 248, 191, 0.6); 
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .page { display: none; }
+        .page.active { display: block; }
+        .menu-icon {
+            width: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-75 z-[100] flex flex-col items-center justify-center" style="display: none;">
+        <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." class="w-16 h-16">
+        <p class="text-white mt-4 text-lg">กำลังโหลดข้อมูล...</p>
+    </div>
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden md:hidden"></div>
+
+    <aside id="sidebar" class="sidebar text-white w-64 flex flex-col fixed inset-y-0 left-0 z-40 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-4 border-b border-white/10 flex items-center">
+            <span class="text-3xl">🏦</span>
+            <span class="ml-3 text-xl font-bold">SAVING APP</span>
+        </div>
+        <nav class="flex-grow pt-4">
+            <a href="#" class="nav-link flex items-center py-3 px-4 text-white/80 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-colors" data-page="dashboard">
+                <span class="menu-icon">🏠</span><span class="ml-4">Dashboard</span>
+            </a>
+            <a href="#" class="nav-link flex items-center py-3 px-4 text-white/80 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-colors" data-page="transactions">
+                <span class="menu-icon">💰</span><span class="ml-4">รายการของฉัน</span>
+            </a>
+            <a href="#" class="nav-link flex items-center py-3 px-4 text-white/80 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-colors" data-page="reports">
+                <span class="menu-icon">📊</span><span class="ml-4">รายงาน</span>
+            </a>
+            <a href="#" id="share-button" class="flex items-center py-3 px-4 text-white/80 hover:bg-white/10 hover:text-white rounded-lg mx-2 transition-colors">
+                <span class="menu-icon">↪️</span><span class="ml-4">ชวนเพื่อน</span>
+            </a>
+        </nav>
+        <div id="user-profile" class="p-4 border-t border-white/10 flex items-center">
+            <img id="user-picture" src="https://img.icons8.com/?size=80&id=492ILERveW8G&format=png" class="w-10 h-10 rounded-full border-2 border-white/30">
+            <div class="ml-3 overflow-hidden">
+                <p id="user-name" class="font-semibold text-sm truncate">Loading...</p>
+                <p id="user-id" class="text-xs text-white/60">Not logged in</p>
+            </div>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+      
+        <header class="flex items-center justify-between p-4 bg-white/30 backdrop-blur-sm md:justify-end">
+            
+            <button id="menu-toggle-btn" class="md:hidden p-2 rounded-md hover:bg-gray-200">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            </button>
+            <h1 id="header-title" class="font-semibold text-gray-700">ยินดีต้อนรับ!</h1>
+        </header>
+
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+         
+            <div id="page-dashboard" class="page active">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="card p-6 rounded-2xl shadow-lg flex items-center space-x-4 transition-transform hover:scale-105">
+                        <div class="bg-green-100 p-3 rounded-full"><span class="text-2xl">💵</span></div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-600">ยอดฝากทั้งหมด</h2>
+                            <p id="total-deposit" class="text-3xl font-bold primary-text mt-1">0.00 บ.</p>
+                        </div>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-lg flex items-center space-x-4 transition-transform hover:scale-105">
+                        <div class="bg-red-100 p-3 rounded-full"><span class="text-2xl">💳</span></div>
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-600">ยอดถอนทั้งหมด</h2>
+                            <p id="total-withdraw" class="text-3xl font-bold text-red-600 mt-1">0.00 บ.</p>
+                        </div>
+                    </div>
+                    <div class="card p-6 rounded-2xl shadow-lg flex items-center space-x-4 transition-transform hover:scale-105">
+                        <div class="bg-yellow-100 p-3 rounded-full"><span class="text-2xl">💰</span></div>
+                        <div>
+                             <h2 class="text-lg font-semibold text-gray-600">ยอดคงเหลือ</h2>
+                            <p id="net-balance" class="text-3xl font-bold accent-color mt-1">0.00 บ.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-6 rounded-2xl shadow-lg">
+                     <h2 class="text-xl font-bold secondary-text mb-4">ภาพรวมธุรกรรม</h2>
+                    <canvas id="summaryChart"></canvas>
+                </div>
+            </div>
+
+          
+            <div id="page-transactions" class="page">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h1 class="text-3xl font-bold secondary-text">💰 รายการของฉัน</h1>
+                    <button id="add-transaction-btn" class="main-button text-white font-bold py-2 px-6 rounded-full flex items-center shadow-lg">
+                        <span class="mr-2">➕</span> เพิ่มรายการ
+                    </button>
+                </div>
+                <div class="card p-6 rounded-2xl shadow-lg">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label for="filter-start-date" class="block text-sm font-medium text-gray-700 mb-1">วันที่เริ่มต้น</label>
+                            <input type="date" id="filter-start-date" class="border-gray-300 p-2 rounded-lg w-full">
+                        </div>
+                        <div>
+                            <label for="filter-end-date" class="block text-sm font-medium text-gray-700 mb-1">วันที่สิ้นสุด</label>
+                            <input type="date" id="filter-end-date" class="border-gray-300 p-2 rounded-lg w-full">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/50">
+                                <tr class="border-b border-slate-200">
+                                    <th class="p-4 text-sm font-semibold text-slate-600">วันที่</th>
+                                    <th class="p-4 text-sm font-semibold text-slate-600">รายละเอียด</th>
+                                    <th class="p-4 text-sm font-semibold text-slate-600 text-right">ฝาก</th>
+                                    <th class="p-4 text-sm font-semibold text-slate-600 text-right">ถอน</th>
+                                    <th class="p-4 text-sm font-semibold text-slate-600 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-table-body" class="divide-y divide-slate-100">
+                               <!-- Data -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+           
+            <div id="page-reports" class="page">
+                <h1 class="text-3xl font-bold secondary-text mb-6">📊 รายงาน</h1>
+                <div class="card p-6 rounded-2xl shadow-lg mb-8">
+                     <h2 class="text-xl font-bold secondary-text mb-4">สรุปรายวัน</h2>
+                     <div class="flex flex-col md:flex-row items-stretch md:items-end gap-4">
+                         <div class="flex-grow">
+                             <label for="report-date" class="block text-sm font-medium text-gray-700 mb-1">เลือกวันที่</label>
+                             <input type="date" id="report-date" class="border-gray-300 p-2 rounded-lg w-full" value="">
+                         </div>
+                         <button id="search-report-btn" class="main-button text-white font-bold py-2 px-6 rounded-full shadow-lg">ค้นหา</button>
+                     </div>
+                </div>
+                <div id="report-summary" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="card p-6 rounded-2xl shadow-md">
+                            <h2 class="text-lg font-semibold text-gray-600">ยอดฝาก</h2>
+                            <p id="report-deposit" class="text-3xl font-bold primary-text mt-1">0.00 บ.</p>
+                        </div>
+                        <div class="card p-6 rounded-2xl shadow-md">
+                            <h2 class="text-lg font-semibold text-gray-600">ยอดถอน</h2>
+                            <p id="report-withdraw" class="text-3xl font-bold text-red-600 mt-1">0.00 บ.</p>
+                        </div>
+                        <div class="card p-6 rounded-2xl shadow-md">
+                             <h2 class="text-lg font-semibold text-gray-600">ยอดสุทธิ</h2>
+                            <p id="report-net" class="text-3xl font-bold accent-color mt-1">0.00 บ.</p>
+                        </div>
+                    </div>
+                     <div class="card p-6 rounded-2xl shadow-lg">
+                         <table class="w-full text-left">
+                            <thead class="bg-slate-50/50">
+                               <tr class="border-b border-slate-200">
+                                   <th class="p-4 text-sm font-semibold text-slate-600">เวลา</th>
+                                   <th class="p-4 text-sm font-semibold text-slate-600">ประเภท</th>
+                                   <th class="p-4 text-sm font-semibold text-slate-600">รายละเอียด</th>
+                                   <th class="p-4 text-sm font-semibold text-slate-600 text-right">จำนวนเงิน</th>
+                               </tr>
+                            </thead>
+                            <tbody id="report-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                     </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    
+    <div id="transaction-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+            <h2 id="modal-title" class="text-2xl font-bold mb-6 secondary-text">เพิ่มรายการใหม่</h2>
+            <form id="transaction-form">
+                <input type="hidden" id="transaction-id">
+                <div class="mb-4">
+                    <label for="transaction-type" class="block mb-2 font-semibold text-gray-700">ประเภท</label>
+                    <select id="transaction-type" class="w-full border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#006992] transition">
+                        <option value="deposit">ฝาก</option>
+                        <option value="withdraw">ถอน</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="amount" class="block mb-2 font-semibold text-gray-700">จำนวนเงิน</label>
+                    <input type="number" id="amount" class="w-full border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#006992] transition" placeholder="0.00" step="0.01" required>
+                </div>
+                <div class="mb-6">
+                    <label for="details" class="block mb-2 font-semibold text-gray-700">รายละเอียด (ไม่บังคับ)</label>
+                    <input type="text" id="details" class="w-full border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-[#006992] transition" placeholder="เช่น ค่ากาแฟ, ค่าเดินทาง">
+                </div>
+                <div class="flex justify-end gap-4 mt-8">
+                    <button type="button" id="cancel-btn" class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-full hover:bg-gray-300 transition">ยกเลิก</button>
+                    <button type="submit" class="main-button text-white font-bold py-2 px-6 rounded-full shadow-lg">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+       
+        const APP_VERSION = '1.2.0'; 
+
+        const LIFF_ID = "2007934888-X5lvdBpK";
+        const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const state = {
+            liffProfile: null,
+            transactions: [],
+            chart: null,
+            userId: null,
+        };
+
+        
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const pages = document.querySelectorAll('.page');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const userProfileElements = {
+            picture: document.getElementById('user-picture'),
+            name: document.getElementById('user-name'),
+            id: document.getElementById('user-id'),
+        };
+        const modal = document.getElementById('transaction-modal');
+        const transactionForm = document.getElementById('transaction-form');
+        const menuToggleButton = document.getElementById('menu-toggle-btn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const headerTitle = document.getElementById('header-title');
+
+        
+        const showLoader = () => loadingOverlay.style.display = 'flex';
+        const hideLoader = () => loadingOverlay.style.display = 'none';
+        
+        const formatCurrency = (amount) => `${parseFloat(amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บ.`;
+        
+        const formatDate = (dateString) => {
+            const date = new Date(dateString);
+            const dateOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
+            const datePart = date.toLocaleDateString('th-TH', dateOptions);
+            const timePart = date.toLocaleTimeString('th-TH', timeOptions);
+            return `${datePart}<br>${timePart} น.`;
+        };
+
+        const showSuccessAlert = (title) => {
+            Swal.fire({ icon: 'success', title: title, showConfirmButton: false, timer: 1500, toast: true, position: 'top-end' });
+        };
+        const showErrorAlert = (title) => {
+            Swal.fire({ icon: 'error', title: title, toast: true, position: 'top-end' });
+        };
+
+       
+        async function handleApiRequest(url, options = {}) {
+            showLoader();
+            const urlParams = new URLSearchParams(url.split('?')[1] || '');
+            const action = urlParams.get('action');
+
+            try {
+                const userId = state.userId;
+                if (!userId) throw new Error("User not initialized.");
+
+                switch (action) {
+                    case 'addTransaction':
+                        const { data: newTx, error: addError } = await supabaseClient
+                            .from('transactions')
+                            .insert([options.body])
+                            .select();
+                        if (addError) throw addError;
+                        return { transaction: newTx[0] };
+
+                    case 'getAllTransactions':
+                         const { data: transactions, error: allTxError } = await supabaseClient
+                            .from('transactions')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false });
+                        if (allTxError) throw allTxError;
+                        return { transactions };
+
+                    case 'getSummaryByDay':
+                        const localDate = urlParams.get('date');
+                        const startOfDayLocal = new Date(`${localDate}T00:00:00`);
+                        const endOfDayLocal = new Date(`${localDate}T23:59:59.999`);
+                        const startOfDayUTC = startOfDayLocal.toISOString();
+                        const endOfDayUTC = endOfDayLocal.toISOString();
+
+                        const { data: summary, error: summaryError } = await supabaseClient
+                            .from('transactions')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .gte('created_at', startOfDayUTC)
+                            .lte('created_at', endOfDayUTC);
+                        if (summaryError) throw summaryError;
+                        return { transactions: summary };
+                    
+                    case 'updateTransaction':
+                         const { data: updatedTx, error: updateError } = await supabaseClient
+                            .from('transactions')
+                            .update(options.body)
+                            .eq('id', options.body.id)
+                            .eq('user_id', userId)
+                            .select();
+                        if (updateError) throw updateError;
+                        return { transaction: updatedTx[0] };
+                    
+                    case 'deleteTransaction':
+                        const { error: deleteError } = await supabaseClient
+                            .from('transactions')
+                            .delete()
+                            .eq('id', urlParams.get('id'))
+                            .eq('user_id', userId);
+                        if(deleteError) throw deleteError;
+                        return { success: true };
+
+                    default:
+                        throw new Error('Invalid API action');
+                }
+            } catch (error) {
+                console.error(`API Error on action '${action}':`, error);
+                showErrorAlert(error.message);
+                return null;
+            } finally {
+                hideLoader();
+            }
+        }
+
+
+        
+        function renderDashboard() {
+            const transactions = state.transactions;
+            const totalDeposit = transactions.filter(t => t.transaction_type === 'deposit').reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const totalWithdraw = transactions.filter(t => t.transaction_type === 'withdraw').reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const netBalance = totalDeposit - totalWithdraw;
+
+            document.getElementById('total-deposit').textContent = formatCurrency(totalDeposit);
+            document.getElementById('total-withdraw').textContent = formatCurrency(totalWithdraw);
+            document.getElementById('net-balance').textContent = formatCurrency(netBalance);
+            
+            renderSummaryChart(transactions);
+        }
+
+        function renderSummaryChart(transactions) {
+            const ctx = document.getElementById('summaryChart').getContext('2d');
+            const localDateStrings = transactions.map(t => new Date(t.created_at).toLocaleDateString('sv-SE'));
+            const labels = [...new Set(localDateStrings)].sort();
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(0, 105, 146, 0.5)');   
+            gradient.addColorStop(1, 'rgba(0, 105, 146, 0)');
+
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'ยอดฝาก',
+                        data: labels.map(localDate => 
+                            transactions
+                                .filter(t => new Date(t.created_at).toLocaleDateString('sv-SE') === localDate && t.transaction_type === 'deposit')
+                                .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+                        ),
+                        borderColor: '#006992', backgroundColor: gradient, fill: true, tension: 0.4
+                    },
+                    {
+                        label: 'ยอดถอน',
+                        data: labels.map(localDate => 
+                            transactions
+                                .filter(t => new Date(t.created_at).toLocaleDateString('sv-SE') === localDate && t.transaction_type === 'withdraw')
+                                .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+                        ),
+                        borderColor: '#E53E3E', backgroundColor: 'rgba(229, 62, 62, 0.1)', fill: true, tension: 0.4
+                    }
+                ]
+            };
+            
+            if (state.chart) state.chart.destroy();
+
+            state.chart = new Chart(ctx, {
+                type: 'line', data: data,
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function renderTransactionsTable(transactionsToRender) {
+            const tbody = document.getElementById('transactions-table-body');
+            tbody.innerHTML = '';
+            if (transactionsToRender.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">ยังไม่มีรายการ</td></tr>';
+                return;
+            }
+
+            transactionsToRender.forEach(tx => {
+                const isDeposit = tx.transaction_type === 'deposit';
+                const row = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 text-gray-700 align-middle">${formatDate(tx.created_at)}</td>
+                        <td class="p-4 text-gray-500 text-sm align-middle truncate max-w-xs">${tx.details || '-'}</td>
+                        <td class="p-4 text-right ${isDeposit ? 'text-green-600 font-semibold' : 'text-gray-500'} align-middle">${isDeposit ? formatCurrency(tx.amount) : '-'}</td>
+                        <td class="p-4 text-right ${!isDeposit ? 'text-red-600 font-semibold' : 'text-gray-500'} align-middle">${!isDeposit ? formatCurrency(tx.amount) : '-'}</td>
+                        <td class="p-4 text-center space-x-2 align-middle">
+                            <button class="edit-btn p-1 text-xl" data-id="${tx.id}">✏️</button>
+                            <button class="delete-btn p-1 text-xl" data-id="${tx.id}">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        function renderReport(transactions) {
+            const summaryDiv = document.getElementById('report-summary');
+            const reportTableBody = document.getElementById('report-table-body');
+            reportTableBody.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                summaryDiv.classList.add('hidden');
+                showErrorAlert('ไม่พบข้อมูลในวันที่เลือก');
+                return;
+            }
+
+            const deposit = transactions.filter(t => t.transaction_type === 'deposit').reduce((s, t) => s + parseFloat(t.amount), 0);
+            const withdraw = transactions.filter(t => t.transaction_type === 'withdraw').reduce((s, t) => s + parseFloat(t.amount), 0);
+            
+            document.getElementById('report-deposit').textContent = formatCurrency(deposit);
+            document.getElementById('report-withdraw').textContent = formatCurrency(withdraw);
+            document.getElementById('report-net').textContent = formatCurrency(deposit - withdraw);
+
+            transactions.forEach(tx => {
+                const isDeposit = tx.transaction_type === 'deposit';
+                const timePart = new Date(tx.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const row = `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-2 text-gray-700">${timePart} น.</td>
+                        <td class="p-2 text-gray-700">${isDeposit ? 'ฝาก' : 'ถอน'}</td>
+                        <td class="p-2 text-gray-500 text-sm">${tx.details || '-'}</td>
+                        <td class="p-2 text-right font-semibold ${isDeposit ? 'text-green-600' : 'text-red-600'}">
+                            ${isDeposit ? '+' : '-'}${formatCurrency(tx.amount)}
+                        </td>
+                    </tr>
+                `;
+                reportTableBody.innerHTML += row;
+            });
+
+            summaryDiv.classList.remove('hidden');
+        }
+
+        
+        async function fetchAllData() {
+            const cacheKey = `transactions_${APP_VERSION}_${state.userId}`;
+            const data = await handleApiRequest('?action=getAllTransactions');
+            
+            if (data) {
+                state.transactions = data.transactions;
+                localStorage.setItem(cacheKey, JSON.stringify(state.transactions));
+            } else {
+                const cachedTransactions = localStorage.getItem(cacheKey);
+                if (cachedTransactions) {
+                    state.transactions = JSON.parse(cachedTransactions);
+                    showErrorAlert('ไม่สามารถโหลดข้อมูลล่าสุดได้ กำลังแสดงข้อมูลที่บันทึกไว้');
+                }
+            }
+        }
+
+
+        
+        function setupEventListeners() {
+            menuToggleButton.addEventListener('click', () => {
+                sidebar.classList.toggle('-translate-x-full');
+                sidebarBackdrop.classList.toggle('hidden');
+            });
+            sidebarBackdrop.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarBackdrop.classList.add('hidden');
+            });
+
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const pageId = e.currentTarget.getAttribute('data-page');
+                    pages.forEach(p => p.classList.remove('active'));
+                    document.getElementById(`page-${pageId}`).classList.add('active');
+                    
+                    headerTitle.textContent = e.currentTarget.querySelector('span:last-child').textContent;
+                    
+                    if (pageId === 'dashboard') renderDashboard();
+                    if (pageId === 'transactions') renderTransactionsTable(state.transactions);
+
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('-translate-x-full');
+                        sidebarBackdrop.classList.add('hidden');
+                    }
+                });
+            });
+
+            document.getElementById('add-transaction-btn').addEventListener('click', () => openTransactionModal());
+            document.getElementById('cancel-btn').addEventListener('click', () => modal.style.display = 'none');
+            transactionForm.addEventListener('submit', handleFormSubmit);
+            
+            document.getElementById('transactions-table-body').addEventListener('click', (e) => {
+                const editBtn = e.target.closest('.edit-btn');
+                const deleteBtn = e.target.closest('.delete-btn');
+                if (editBtn) {
+                    const txId = editBtn.dataset.id;
+                    const transaction = state.transactions.find(t => t.id == txId);
+                    openTransactionModal(transaction);
+                }
+                if (deleteBtn) {
+                    const txId = deleteBtn.dataset.id;
+                    handleDeleteTransaction(txId);
+                }
+            });
+            
+            ['filter-start-date', 'filter-end-date'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyTransactionFilters);
+            });
+
+            document.getElementById('search-report-btn').addEventListener('click', async () => {
+                const date = document.getElementById('report-date').value;
+                if (!date) {
+                    showErrorAlert('กรุณาเลือกวันที่');
+                    return;
+                }
+                const data = await handleApiRequest(`?action=getSummaryByDay&date=${date}`);
+                if (data) {
+                    renderReport(data.transactions);
+                }
+            });
+            
+            document.getElementById('share-button').addEventListener('click', shareToFriends);
+        }
+        
+        function applyTransactionFilters() {
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+            
+            let filtered = state.transactions.filter(tx => {
+                const txDate = new Date(tx.created_at).toLocaleDateString('sv-SE');
+                return (!startDate || txDate >= startDate) && (!endDate || txDate <= endDate);
+            });
+            
+            renderTransactionsTable(filtered);
+        }
+
+        function openTransactionModal(transaction = null) {
+            transactionForm.reset();
+            const modalTitle = document.getElementById('modal-title');
+            
+            if (transaction) { 
+                modalTitle.textContent = 'แก้ไขรายการ';
+                document.getElementById('transaction-id').value = transaction.id;
+                document.getElementById('transaction-type').value = transaction.transaction_type;
+                document.getElementById('amount').value = transaction.amount || '';
+                document.getElementById('details').value = transaction.details || '';
+            } else { 
+                modalTitle.textContent = 'เพิ่มรายการใหม่';
+                document.getElementById('transaction-id').value = '';
+            }
+            modal.style.display = 'flex';
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('transaction-id').value;
+            const userId = state.userId;
+            const transaction_type = document.getElementById('transaction-type').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const details = document.getElementById('details').value.trim();
+
+            if (!amount || amount <= 0) {
+                showErrorAlert('กรุณากรอกจำนวนเงินให้ถูกต้อง');
+                return;
+            }
+            
+            const payload = { user_id: userId, transaction_type, amount, details };
+            let result;
+
+            if (id) { 
+                payload.id = id;
+                result = await handleApiRequest('?action=updateTransaction', { method: 'POST', body: payload });
+            } else { 
+                result = await handleApiRequest('?action=addTransaction', { method: 'POST', body: payload });
+            }
+            
+            if (result) {
+                showSuccessAlert('บันทึกข้อมูลสำเร็จ ✅');
+                modal.style.display = 'none';
+                await refreshDataAndRender();
+            }
+        }
+        
+        async function handleDeleteTransaction(id) {
+            Swal.fire({
+                title: 'คุณแน่ใจหรือไม่?',
+                text: "คุณจะไม่สามารถกู้คืนข้อมูลนี้ได้!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'ใช่, ลบเลย!',
+                cancelButtonText: 'ยกเลิก'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    const response = await handleApiRequest(`?action=deleteTransaction&id=${id}`);
+                    if (response?.success) {
+                        showSuccessAlert('ลบข้อมูลสำเร็จ');
+                        await refreshDataAndRender();
+                    }
+                }
+            });
+        }
+
+        async function refreshDataAndRender() {
+            await fetchAllData();
+            const currentPage = document.querySelector('.page.active').id.replace('page-', '');
+            if (currentPage === 'dashboard') renderDashboard();
+            if (currentPage === 'transactions') renderTransactionsTable(state.transactions);
+        }
+
+        function clearOldCache() {
+            const storedVersion = localStorage.getItem('appVersion');
+            if (storedVersion !== APP_VERSION) {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('transactions_')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                localStorage.setItem('appVersion', APP_VERSION);
+                console.log(`Cache cleared for new version: ${APP_VERSION}`);
+            }
+        }
+
+        async function promptForRegistration() {
+            const { value: phone } = await Swal.fire({
+                title: 'ลงทะเบียนก่อนใช้งาน',
+                text: 'กรุณากรอกเบอร์โทรศัพท์ของคุณเพื่อดำเนินการต่อ',
+                input: 'tel',
+                inputPlaceholder: '0812345678',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                inputValidator: (value) => {
+                    if (!value || !/^\d{10}$/.test(value)) {
+                        return 'กรุณากรอกเบอร์โทรศัพท์ 10 หลักให้ถูกต้อง'
+                    }
+                }
+            });
+
+            if (phone) {
+                showLoader();
+                const { error: upsertError } = await supabaseClient
+                    .from('user_profiles')
+                    .upsert({
+                        "userId": state.userId,
+                        "displayName": state.liffProfile.displayName,
+                        "pictureUrl": state.liffProfile.pictureUrl,
+                        "phone": phone,
+                        "updated_at": new Date().toISOString()
+                    }, { onConflict: '"userId"' });
+                
+                hideLoader();
+                if (upsertError) {
+                    console.error('Error during registration:', upsertError);
+                    showErrorAlert('การลงทะเบียนล้มเหลว กรุณาลองใหม่อีกครั้ง');
+                    return false; 
+                } else {
+                    await Swal.fire('ลงทะเบียนสำเร็จ!', '', 'success');
+                    return true; 
+                }
+            }
+            return false; 
+        }
+
+        
+        async function initializeApp() {
+            try {
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return false; 
+                }
+                
+                state.liffProfile = await liff.getProfile();
+                state.userId = state.liffProfile.userId;
+
+                userProfileElements.picture.src = state.liffProfile.pictureUrl;
+                userProfileElements.name.textContent = state.liffProfile.displayName;
+                userProfileElements.id.textContent = state.userId.substring(0, 10) + '...';
+
+                
+                const { data, error } = await supabaseClient
+                    .from('user_profiles')
+                    .select('userId, phone')
+                    .eq('"userId"', state.userId)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') { 
+                    throw error;
+                }
+
+                if (!data || !data.phone) {
+                    const registrationSuccess = await promptForRegistration();
+                    if (!registrationSuccess) {
+                        showErrorAlert("การลงทะเบียนไม่สำเร็จ ไม่สามารถใช้งานแอปได้");
+                        return false; 
+                    }
+                }
+
+                return true; 
+
+            } catch (error) {
+                console.error('Initialization failed', error);
+                showErrorAlert('ไม่สามารถเริ่มต้นระบบได้');
+                return false;
+            }
+        }
+        
+        async function shareToFriends() {
+            if (!liff.isApiAvailable('shareTargetPicker')) {
+                showErrorAlert("ฟังก์ชันแชร์ไม่พร้อมใช้งานในเวอร์ชันนี้"); return;
+            }
+            try {
+                await liff.shareTargetPicker([
+                    {
+                        type: "flex", altText: "ชวนมาออมเงินกัน!",
+                        contents: {
+                          "type": "bubble",
+                          "hero": {
+                            "type": "image", "url": "https://img.freepik.com/free-vector/save-money-concept-illustration_114360-14360.jpg",
+                            "size": "full", "aspectRatio": "20:13", "aspectMode": "fit"
+                          },
+                          "body": {
+                            "type": "box", "layout": "vertical", "contents": [
+                              { "type": "text", "text": "มาเริ่มออมเงินกัน!", "weight": "bold", "size": "xl" },
+                              { "type": "box", "layout": "vertical", "margin": "lg", "spacing": "sm", "contents": [
+                                  { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [
+                                      { "type": "text", "text": "ชวนโดย", "color": "#aaaaaa", "size": "sm", "flex": 2 },
+                                      { "type": "text", "text": state.liffProfile.displayName, "wrap": true, "color": "#666666", "size": "sm", "flex": 5 }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          "footer": {
+                            "type": "box", "layout": "vertical", "spacing": "sm", "contents": [
+                              { "type": "button", "style": "link", "height": "sm", "action": { "type": "uri", "label": "เริ่มออมเลย", "uri": `https://liff.line.me/${LIFF_ID}` } }
+                            ],
+                            "flex": 0
+                          }
+                        }
+                    }
+                ]);
+                showSuccessAlert("แชร์สำเร็จ!");
+            } catch (error) {
+                console.error(error);
+                if (error.code !== "PICKER-CANCELLED") showErrorAlert("เกิดข้อผิดพลาดในการแชร์");
+            }
+        }
+
+       
+        async function main() {
+            clearOldCache(); 
+            showLoader();
+            const isInitialized = await initializeApp();
+            
+            if (isInitialized) {
+                await fetchAllData();
+                renderDashboard();
+                renderTransactionsTable(state.transactions);
+                document.getElementById('report-date').value = new Date().toISOString().split('T')[0];
+                setupEventListeners();
+            }
+            
+            hideLoader();
+        }
+
+        main();
+    });
+
+    const message = "ไม่อนุญาตให้คลิกขวาครับ";
+
+    document.addEventListener("contextmenu", function (e) {
+        Swal.fire('Oh!', message, 'error');
+    
+        e.preventDefault();
+    });
+
+    document.addEventListener("mousedown", function (e) {
+        if (e.button === 2 || e.button === 1) {
+        Swal.fire('Oh!', message, 'error');
+        
+        e.preventDefault();
+        }
+    });
+
+    
+</script>
+
+</body>
+</html>
