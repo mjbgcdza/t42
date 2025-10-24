@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Event RSVP</title>
+  <meta name="description" content="Admin Event RSVP for MINI App" />
+  <meta name="author" content="T42" />
+  <meta property="og:title" content="Admin Event RSVP for MINI App-T42-thailand" />
+  <meta property="og:description" content="Admin Event RSVP for MINI App" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U69f69a6d9b1bbb632a0ff7db6e67eeac/1757423533327.jpeg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ 
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap');
+    body { font-family: 'Prompt', sans-serif; background-color: #E5E7EB; color: #1F2937; } 
+    .btn { transition: all 0.2s ease-in-out; border-radius: 0.75rem; padding: 0.6rem 1.2rem; font-weight: 500; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background-color: #3B82F6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+    .btn-secondary { background-color: #6B7280; color: white; box-shadow: 0 4px 10px rgba(107, 114, 128, 0.3); }
+    .btn-danger { background-color: #EF4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); }
+    
+    .swal2-popup { border-radius: 1rem !important; }
+    .swal2-title { color: #1F2937 !important; }
+    .swal2-html-container { color: #4B5563 !important; text-align: left !important; }
+    .swal-form-input { 
+      box-sizing: border-box; width: 100%;
+      background-color: #F9FAFB !important; border: 1px solid #D1D5DB !important;
+      color: #1F2937 !important; border-radius: 0.5rem !important; padding: 0.75rem;
+    }
+     .swal-form-input:focus { 
+        outline: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5) !important; 
+        border-color: #3B82F6 !important;
+    }
+    .swal2-confirm { background-color: #3B82F6 !important; border-radius: 0.75rem !important; }
+    .swal2-cancel { background-color: #E5E7EB !important; color: #4B5563 !important; border-radius: 0.75rem !important; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    #loading-overlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background-color: rgba(229, 231, 235, 0.8); backdrop-filter: blur(5px); 
+      display: flex; justify-content: center; align-items: center; 
+      z-index: 9999; flex-direction: column; gap: 1rem; 
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <div id="loading-overlay">
+    <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." class="w-16 h-16">
+    <p id="loading-text" class="text-lg text-gray-600 font-semibold">กำลังโหลด...</p>
+  </div>
+  
+  <div class="container mx-auto max-w-3xl p-4">
+    <header class="text-center my-8 fade-in">
+        <h1 class="text-3xl font-bold text-gray-800">Admin จัดการกิจกรรม</h1>
+        <p class="text-gray-500">สร้าง แก้ไข และดูผู้เข้าร่วมกิจกรรม</p>
+    </header>
+
+     <div class="mb-8 flex justify-center fade-in">
+      <button id="add-event-btn" class="btn btn-primary shadow-lg">
+        + เพิ่มกิจกรรมใหม่
+      </button>
+    </div>
+
+    <main id="admin-event-list" class="space-y-6">
+        <!-- Admin event cards -->
+    </main>
+  </div>
+
+  <script type="module">
+    const LIFF_ID = "2007934888-D3a9Bdwp";
+    const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const eventListContainer = document.getElementById('admin-event-list');
+    const addEventBtn = document.getElementById('add-event-btn');
+    let adminProfile = null;
+    let allEvents = [];
+
+    const showLoading = (text = 'กำลังโหลด...') => {
+        document.getElementById('loading-text').textContent = text;
+        loadingOverlay.style.display = 'flex';
+    };
+    const hideLoading = () => {
+        loadingOverlay.style.display = 'none';
+    };
+   
+    async function invokeAdminFunction(payload) {
+        const { data, error } = await supabaseClient.functions.invoke('manage-events-admin', {
+            body: { ...payload },
+        });
+        if (error) {
+           let errorMessage = 'เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์';
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const errorBody = await error.context.json();
+                    if (errorBody && errorBody.error) errorMessage = errorBody.error;
+                } catch(_) {}
+            } else {
+                 errorMessage = error.message;
+            }
+           throw new Error(errorMessage);
+        }
+        return data;
+    }
+
+
+    function formatDateThai(dateString) {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString('th-TH', { 
+            dateStyle: 'medium', timeStyle: 'short'
+        });
+    }
+    
+    function formatDateForInput(isoString) {
+        if (!isoString) return '';
+        try {
+            const date = new Date(isoString);
+            date.setHours(date.getHours() + 7);
+            const formatted = date.toISOString().slice(0, 16);
+            return formatted;
+        } catch (e) {
+            console.error("Error formatting date for input:", e);
+            return '';
+        }
+    }
+
+    function formatInputDateToISO(inputString) {
+         if (!inputString) return null;
+        try {
+            const date = new Date(inputString + ':00+07:00'); 
+            return date.toISOString();
+        } catch (e) {
+             console.error("Error formatting input date to ISO:", e);
+             return null;
+        }
+    }
+
+    function translateStatus(status) {
+        switch (status) {
+            case 'going': return 'เข้าร่วม';
+            case 'maybe': return 'อาจจะ';
+            case 'not_going': return 'ไม่เข้าร่วม';
+            default: return status;
+        }
+    }
+
+    function renderAdminEventCard(event) {
+        const eventEl = document.createElement('div');
+        eventEl.className = 'bg-white rounded-2xl shadow-md overflow-hidden fade-in';
+        
+        const counts = event.rsvpCounts || { going: 0, maybe: 0, not_going: 0 };
+
+        eventEl.innerHTML = `
+            <img src="${event.image_url || 'https://placehold.co/600x300/E5E7EB/9CA3AF?text=Event'}" alt="${event.name}" class="w-full h-48 object-cover">
+            <div class="p-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-1">${event.name}</h2>
+                <p class="text-sm text-gray-500 mb-2">${formatDateThai(event.event_date)}</p>
+                <p class="text-sm text-gray-500 mb-3">${event.location || 'ไม่ระบุสถานที่'}</p>
+                
+                 <div class="flex gap-4 text-xs mb-4">
+                    <span class="text-green-600 font-medium">เข้าร่วม: ${counts.going}</span>
+                    <span class="text-yellow-600 font-medium">อาจจะ: ${counts.maybe}</span>
+                    <span class="text-red-600 font-medium">ไม่เข้าร่วม: ${counts.not_going}</span>
+                </div>
+                
+                <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
+                    <button class="view-rsvps-btn btn btn-secondary text-sm" data-event-id="${event.id}">ดูรายชื่อ</button>
+                    <button class="edit-event-btn btn btn-primary text-sm" data-event-id="${event.id}">แก้ไข</button>
+                    <button class="delete-event-btn btn btn-danger text-sm" data-event-id="${event.id}">ลบ</button>
+                </div>
+            </div>
+        `;
+
+        eventEl.querySelector('.view-rsvps-btn').addEventListener('click', () => showRsvpModal(event.id, event.name));
+        eventEl.querySelector('.edit-event-btn').addEventListener('click', () => openAddEditModal(event)); 
+        eventEl.querySelector('.delete-event-btn').addEventListener('click', () => handleDeleteEvent(event.id, event.name));
+
+        return eventEl;
+    }
+
+    async function loadEvents() {
+        showLoading('กำลังโหลดกิจกรรม...');
+        eventListContainer.innerHTML = '';
+        allEvents = [];
+        try {
+            const data = await invokeAdminFunction({ action: 'listEventsWithRsvpCounts' });
+            allEvents = data.events || []; 
+
+            if (allEvents.length === 0) {
+                eventListContainer.innerHTML = '<p class="text-center text-gray-500">ยังไม่มีกิจกรรมที่สร้างไว้</p>';
+            } else {
+                allEvents.forEach(event => {
+                    eventListContainer.appendChild(renderAdminEventCard(event));
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถโหลดข้อมูลกิจกรรมได้', 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    async function openAddEditModal(event = null) {
+        const isEditing = event !== null;
+        Swal.fire({
+            title: isEditing ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรมใหม่',
+            width: 'clamp(300px, 90%, 600px)',
+            html: `
+                <div class="p-2 text-left space-y-4">
+                     <div class="flex flex-col">
+                        <label for="swal-name" class="mb-2 text-sm font-medium text-gray-700">ชื่อกิจกรรม</label>
+                        <input id="swal-name" class="swal-form-input" value="${isEditing ? event.name : ''}" placeholder="เช่น Coffee Workshop">
+                    </div>
+                     <div class="flex flex-col">
+                        <label for="swal-desc" class="mb-2 text-sm font-medium text-gray-700">รายละเอียด</label>
+                        <textarea id="swal-desc" class="swal-form-input" rows="3" placeholder="กิจกรรมเกี่ยวกับ...">${isEditing ? (event.description || '') : ''}</textarea>
+                    </div>
+                     <div class="flex flex-col">
+                        <label for="swal-datetime" class="mb-2 text-sm font-medium text-gray-700">วันที่และเวลา (ไทย)</label>
+                        <input id="swal-datetime" type="datetime-local" class="swal-form-input" value="${isEditing ? formatDateForInput(event.event_date) : ''}">
+                    </div>
+                     <div class="flex flex-col">
+                        <label for="swal-location" class="mb-2 text-sm font-medium text-gray-700">สถานที่</label>
+                        <input id="swal-location" class="swal-form-input" value="${isEditing ? (event.location || '') : ''}" placeholder="เช่น Coffee Corner สาขาหลัก">
+                    </div>
+                    <div class="flex flex-col">
+                        <label for="swal-image" class="mb-2 text-sm font-medium text-gray-700">Image URL</label>
+                        <input id="swal-image" class="swal-form-input" value="${isEditing ? (event.image_url || '') : ''}" placeholder="https://example.com/image.jpg">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึก',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const name = document.getElementById('swal-name').value;
+                const description = document.getElementById('swal-desc').value;
+                const datetimeLocal = document.getElementById('swal-datetime').value;
+                const location = document.getElementById('swal-location').value;
+                const image_url = document.getElementById('swal-image').value;
+
+                if (!name || !datetimeLocal) {
+                    Swal.showValidationMessage('กรุณากรอกชื่อกิจกรรมและวันที่/เวลา');
+                    return false;
+                }
+                
+                const event_date = formatInputDateToISO(datetimeLocal);
+                if (!event_date) {
+                     Swal.showValidationMessage('รูปแบบวันที่/เวลาไม่ถูกต้อง');
+                     return false;
+                }
+
+                return { name, description, event_date, location, image_url };
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                showLoading('กำลังบันทึก...');
+                try {
+                    const payload = {
+                        action: isEditing ? 'updateEvent' : 'addEvent',
+                        eventData: result.value
+                    };
+                    if (isEditing) {
+                        payload.eventId = event.id;
+                    }
+                    
+                    await invokeAdminFunction(payload);
+                    Swal.fire('สำเร็จ!', 'บันทึกข้อมูลกิจกรรมเรียบร้อย', 'success');
+                    await loadEvents(); 
+                } catch (err) {
+                    console.error("Save Event Error:", err);
+                    Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกได้', 'error');
+                } finally {
+                    hideLoading();
+                }
+            }
+        });
+    }
+
+    async function handleDeleteEvent(eventId, eventName) {
+        Swal.fire({
+            title: `แน่ใจหรือไม่ที่จะลบ "${eventName}"?`,
+            text: "ข้อมูล RSVP ที่เกี่ยวข้องจะถูกลบไปด้วย!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ลบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#EF4444'
+        }).then(async (result) => {
+             if (result.isConfirmed) {
+                showLoading('กำลังลบ...');
+                try {
+                    await invokeAdminFunction({ action: 'deleteEvent', eventId: eventId });
+                    Swal.fire('สำเร็จ!', 'ลบกิจกรรมเรียบร้อย', 'success');
+                    await loadEvents(); 
+                } catch(err) {
+                     console.error("Delete Event Error:", err);
+                     Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถลบได้', 'error');
+                } finally {
+                    hideLoading();
+                }
+             }
+        });
+    }
+    
+    async function showRsvpModal(eventId, eventName) {
+        showLoading('กำลังโหลดรายชื่อ...');
+        try {
+            const data = await invokeAdminFunction({ action: 'listRsvpsForEvent', eventId: eventId });
+            const rsvps = data.rsvps || [];
+
+            let rsvpListHtml = '<p class="text-center text-gray-500">ยังไม่มีผู้ตอบรับ</p>';
+            if (rsvps.length > 0) {
+                 rsvpListHtml = rsvps.map(rsvp => `
+                    <div class="py-2 px-1 border-b border-gray-200 last:border-b-0 flex justify-between items-center text-sm">
+                        <div class="flex items-center gap-2 overflow-hidden mr-2">
+                           <img src="${rsvp.user_picture_url || 'https://placehold.co/40x40/E5E7EB/9CA3AF?text=?'}" alt="Profile" class="w-8 h-8 rounded-full flex-shrink-0">
+                           <div class="overflow-hidden">
+                               <p class="font-medium truncate">${rsvp.user_display_name || 'Unknown User'}</p> 
+                               <p class="text-xs text-gray-400 truncate font-mono">${rsvp.user_id}</p>
+                           </div>
+                        </div>
+                        <span class="font-medium capitalize flex-shrink-0 ${
+                            rsvp.status === 'going' ? 'text-green-600' :
+                            rsvp.status === 'maybe' ? 'text-yellow-600' : 'text-red-600'
+                        }">${translateStatus(rsvp.status)}</span>
+                    </div>
+                 `).join('');
+            }
+
+            Swal.fire({
+                title: `รายชื่อผู้ตอบรับ: ${eventName}`,
+                html: `<div class="max-h-80 overflow-y-auto mt-4">${rsvpListHtml}</div>`,
+                width: 'clamp(300px, 90%, 500px)',
+                confirmButtonText: 'ปิด',
+            });
+
+        } catch(err) {
+             console.error("Load RSVPs Error:", err);
+             Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถโหลดรายชื่อได้', 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            showLoading('กำลังเริ่มต้น...');
+            await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+            if (!liff.isLoggedIn()) {
+                liff.login({ redirectUri: window.location.href });
+                return;
+            }
+            
+            adminProfile = await liff.getProfile();
+            
+            await loadEvents();
+
+        } catch(err) {
+            console.error("Initialization error:", err);
+            document.body.innerHTML = `<div class="p-8 text-center text-red-600">เกิดข้อผิดพลาดร้ายแรง: ${err.message}</div>`;
+        } finally {
+            hideLoading();
+        }
+    });
+    
+    addEventBtn.addEventListener('click', () => openAddEditModal());
+
+  </script>
+</body>
+</html>
