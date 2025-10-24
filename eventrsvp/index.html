@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Events RSVP</title>
+  <meta name="description" content="Event RSVP for MINI App" />
+  <meta name="author" content="T42" />
+  <meta property="og:title" content="Event RSVP for MINI App-T42-thailand" />
+  <meta property="og:description" content="Event RSVP for MINI App" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U69f69a6d9b1bbb632a0ff7db6e67eeac/1757423533327.jpeg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+ 
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap');
+    body { font-family: 'Prompt', sans-serif; background-color: #F3F4F6; color: #1F2937; } /* Light theme */
+    .btn { transition: all 0.2s ease-in-out; }
+    .btn:hover:not(:disabled) { transform: scale(1.05); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-rsvp.active { 
+        filter: brightness(1.1); 
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); 
+        transform: scale(1.02);
+    } 
+
+    .swal2-popup { border-radius: 1rem !important; }
+    .swal2-title { color: #1F2937 !important; }
+    .swal2-html-container { color: #4B5563 !important; }
+    .swal2-styled { border-radius: 0.75rem !important; padding: 0.75rem 1.5rem !important; }
+    .swal2-confirm { background-color: #3B82F6 !important; }
+    .swal2-cancel { background-color: #E5E7EB !important; color: #4B5563 !important; }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.15rem 0.6rem;
+        border-radius: 9999px; 
+        font-size: 0.75rem; 
+        font-weight: 500; 
+    }
+    .status-badge.going { background-color: #ECFDF5; color: #065F46; } /* green */
+    .status-badge.maybe { background-color: #FFFBEB; color: #B45309; } /* yellow */
+    .status-badge.not_going { background-color: #FEF2F2; color: #991B1B; } /* red */
+    .status-badge.past { background-color: #E5E7EB; color: #4B5563; } /* gray for past */
+
+    .btn-calendar {
+        background-color: #ffffff;
+        color: #3B82F6;
+        border: 1px solid #DBEAFE;
+        font-weight: 500;
+        font-size: 0.75rem; 
+        padding: 0.25rem 0.75rem; 
+        border-radius: 9999px;
+        display: inline-flex; 
+        align-items: center;
+        gap: 0.25rem; 
+        margin-top: 0.5rem; 
+    }
+    .btn-calendar:hover:not(:disabled) {
+         background-color: #EFF6FF;
+    }
+
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    #loading-overlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background-color: rgba(243, 244, 246, 0.8); backdrop-filter: blur(5px); 
+      display: flex; justify-content: center; align-items: center; 
+      z-index: 9999; flex-direction: column; gap: 1rem; 
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <div id="loading-overlay">
+    <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." class="w-16 h-16">
+    <p id="loading-text" class="text-lg text-gray-600 font-semibold">กำลังโหลด...</p>
+  </div>
+  
+  <div class="container mx-auto max-w-lg p-4">
+    <header class="text-center my-8 fade-in">
+        <h1 class="text-3xl font-bold text-gray-800">กิจกรรมน่าสนใจ</h1>
+        <p class="text-gray-500">ดูกิจกรรมและตอบรับเข้าร่วม</p>
+    </header>
+    
+    <div class="mb-6 w-full fade-in">
+        <input type="text" id="search-input" class="w-full p-3 rounded-xl border border-gray-300 bg-white text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="🔍 ค้นหากิจกรรม...">
+    </div>
+
+
+    <main id="event-list" class="space-y-6">
+        <!-- Event cards -->
+    </main>
+  </div>
+
+  <script type="module">
+    const LIFF_ID = "2007934888-wPWMx970";
+    const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+
+    const { createClient } = supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const eventListContainer = document.getElementById('event-list');
+    const searchInput = document.getElementById('search-input');
+    let userProfile = null;
+    let userRsvps = {}; 
+    let eventsData = []; 
+    let searchDebounce;
+
+    const showLoading = (text = 'กำลังโหลด...') => {
+        document.getElementById('loading-text').textContent = text;
+        loadingOverlay.style.display = 'flex';
+    };
+    const hideLoading = () => {
+        loadingOverlay.style.display = 'none';
+    };
+
+   
+    async function invokeFunction(payload) {
+        const { data, error } = await supabaseClient.functions.invoke('manage-events', {
+            body: { ...payload },
+        });
+        if (error) {
+           let errorMessage = 'เกิดข้อผิดพลาดในการติดต่อเซิร์ฟเวอร์';
+            if (error.context && typeof error.context.json === 'function') {
+                try {
+                    const errorBody = await error.context.json();
+                    if (errorBody && errorBody.error) errorMessage = errorBody.error;
+                } catch(_) {}
+            } else {
+                 errorMessage = error.message;
+            }
+           throw new Error(errorMessage);
+        }
+        return data;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('th-TH', { 
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', 
+            hour: '2-digit', minute: '2-digit' 
+        });
+    }
+
+    function formatGoogleCalendarDate(dateString) {
+        const date = new Date(dateString);
+        date.setHours(date.getHours()); 
+        return date.toISOString().replace(/[:-]/g, '').split('.')[0] + ''; 
+    }
+
+
+    function getStatusBadge(status, isPast) {
+        if (isPast) return '<span class="status-badge past">🏁 ผ่านไปแล้ว</span>';
+        if (!status) return '';
+        switch (status) {
+            case 'going': return '<span class="status-badge going">✅ เข้าร่วม</span>';
+            case 'maybe': return '<span class="status-badge maybe">❓ อาจจะ</span>';
+            case 'not_going': return '<span class="status-badge not_going">❌ ไม่เข้าร่วม</span>';
+            default: return '';
+        }
+    }
+
+    function renderEventCard(event) {
+        const eventEl = document.createElement('div');
+        eventEl.id = `event-${event.id}`; 
+        eventEl.className = 'bg-white rounded-2xl shadow-md overflow-hidden fade-in';
+        
+        const currentStatus = userRsvps[event.id] || null;
+        const eventDate = new Date(event.event_date);
+        const isPastEvent = eventDate < new Date(); 
+        
+        const statusBadgeHTML = getStatusBadge(currentStatus, isPastEvent);
+        
+        const disableButtons = isPastEvent ? 'disabled' : '';
+        const buttonOpacity = isPastEvent ? 'opacity-50 cursor-not-allowed' : '';
+        
+        const addToCalendarButtonHTML = currentStatus === 'going' && !isPastEvent ? `
+            <button class="btn btn-calendar add-calendar-btn" data-event-id="${event.id}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                เพิ่มในปฏิทิน
+            </button>
+        ` : '';
+
+        eventEl.innerHTML = `
+            <img src="${event.image_url || 'https://placehold.co/600x300/E5E7EB/9CA3AF?text=Event'}" alt="${event.name}" class="w-full h-48 object-cover ${isPastEvent ? 'grayscale' : ''}">
+            <div class="p-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-1">${event.name}</h2>
+                <div class="status-badge-container mb-2 h-6">${statusBadgeHTML}</div> 
+                <p class="text-sm text-gray-500 mb-2">${formatDate(event.event_date)} น.</p>
+                <p class="text-sm text-gray-500 mb-3">${event.location || 'ไม่ระบุสถานที่'}</p>
+                <p class="text-gray-600 mb-4">${event.description || ''}</p>
+                
+                <div class="border-t border-gray-100 pt-3">
+                     <div class="flex justify-between items-center mb-2"> 
+                        <div class="rsvp-buttons flex gap-2 ${buttonOpacity}">
+                            <button class="btn btn-rsvp text-sm font-semibold py-2 px-4 rounded-full ${currentStatus === 'going' ? 'active bg-green-500 text-white' : 'bg-green-100 text-green-700'}" data-event-id="${event.id}" data-status="going" ${disableButtons}>เข้าร่วม</button>
+                            <button class="btn btn-rsvp text-sm font-semibold py-2 px-4 rounded-full ${currentStatus === 'maybe' ? 'active bg-yellow-500 text-white' : 'bg-yellow-100 text-yellow-700'}" data-event-id="${event.id}" data-status="maybe" ${disableButtons}>อาจจะ</button>
+                            <button class="btn btn-rsvp text-sm font-semibold py-2 px-4 rounded-full ${currentStatus === 'not_going' ? 'active bg-red-500 text-white' : 'bg-red-100 text-red-700'}" data-event-id="${event.id}" data-status="not_going" ${disableButtons}>ไม่เข้าร่วม</button>
+                        </div>
+                        <button class="share-event-btn p-2 rounded-full hover:bg-gray-100" data-event-id="${event.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+                        </button>
+                    </div>
+                     <div class="calendar-button-container text-center"> 
+                         ${addToCalendarButtonHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        eventEl.querySelectorAll('.btn-rsvp').forEach(button => {
+            button.addEventListener('click', handleRsvpClick);
+        });
+        
+        eventEl.querySelector('.share-event-btn').addEventListener('click', handleShareClick);
+
+        const calendarBtn = eventEl.querySelector('.add-calendar-btn');
+        if (calendarBtn) {
+            calendarBtn.addEventListener('click', addToGoogleCalendar);
+        }
+
+        return eventEl;
+    }
+
+    async function loadEventsAndRsvps(searchTerm = null) {
+        showLoading(searchTerm ? 'กำลังค้นหา...' : 'กำลังโหลดกิจกรรม...');
+        eventListContainer.innerHTML = ''; 
+        userRsvps = {};
+        eventsData = []; 
+
+        try {
+            const payload = { 
+                action: 'listEventsAndRsvps', 
+                userId: userProfile.userId 
+            };
+            if (searchTerm) {
+                payload.searchTerm = searchTerm;
+            }
+            
+            const data = await invokeFunction(payload);
+            
+            userRsvps = data.rsvps || {};
+            eventsData = data.events || []; 
+
+            if (eventsData.length === 0) {
+                const message = searchTerm ? `ไม่พบกิจกรรมที่ตรงกับ "${searchTerm}"` : "ยังไม่มีกิจกรรม";
+                eventListContainer.innerHTML = `<p class="text-center text-gray-500">${message}</p>`;
+            } else {
+                eventsData.forEach(event => {
+                    eventListContainer.appendChild(renderEventCard(event));
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถโหลดข้อมูลกิจกรรมได้', 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function updateCardUI(eventId, updatedStatus) {
+        const card = document.getElementById(`event-${eventId}`); 
+        if (!card) return;
+        
+        const eventDate = new Date(eventsData.find(e => e.id === eventId)?.event_date);
+        const isPastEvent = eventDate < new Date();
+
+        const statusContainer = card.querySelector('.status-badge-container');
+        if (statusContainer) { 
+             statusContainer.innerHTML = getStatusBadge(updatedStatus, isPastEvent); 
+        }
+
+        const buttons = card.querySelectorAll('.btn-rsvp');
+        buttons.forEach(btn => {
+            const btnStatus = btn.dataset.status;
+            const isActive = updatedStatus === btnStatus;
+            btn.classList.toggle('active', isActive);
+            btn.classList.toggle('bg-green-500', isActive && btnStatus === 'going');
+            btn.classList.toggle('text-white', isActive && (btnStatus === 'going' || btnStatus === 'maybe' || btnStatus === 'not_going'));
+            btn.classList.toggle('bg-yellow-500', isActive && btnStatus === 'maybe');
+            btn.classList.toggle('bg-red-500', isActive && btnStatus === 'not_going');
+            
+            btn.classList.toggle('bg-green-100', !isActive && btnStatus === 'going');
+            btn.classList.toggle('text-green-700', !isActive && btnStatus === 'going');
+            btn.classList.toggle('bg-yellow-100', !isActive && btnStatus === 'maybe');
+            btn.classList.toggle('text-yellow-700', !isActive && btnStatus === 'maybe');
+            btn.classList.toggle('bg-red-100', !isActive && btnStatus === 'not_going');
+            btn.classList.toggle('text-red-700', !isActive && btnStatus === 'not_going');
+        });
+
+        const calendarContainer = card.querySelector('.calendar-button-container');
+        let calendarBtn = calendarContainer.querySelector('.add-calendar-btn');
+        if (updatedStatus === 'going' && !isPastEvent) { 
+            if (!calendarBtn) { 
+                calendarBtn = document.createElement('button');
+                calendarBtn.className = 'btn btn-calendar add-calendar-btn';
+                calendarBtn.dataset.eventId = eventId;
+                calendarBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    เพิ่มในปฏิทิน
+                `;
+                calendarBtn.addEventListener('click', addToGoogleCalendar);
+                calendarContainer.appendChild(calendarBtn); 
+            }
+        } else {
+            if (calendarBtn) { 
+                calendarBtn.remove();
+            }
+        }
+    }
+
+
+    async function handleRsvpClick(e) {
+        const button = e.target;
+        if (button.disabled) return; 
+
+        const eventId = Number(button.dataset.eventId);
+        const newStatus = button.dataset.status;
+        const currentStatus = userRsvps[eventId]; 
+
+        const isDeleting = currentStatus === newStatus;
+        const actionText = isDeleting ? 'ยกเลิกการตอบรับ' : `ตอบรับ "${button.textContent}"`;
+
+        Swal.fire({
+            title: `ยืนยัน ${actionText}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยัน',
+            cancelButtonText: 'ยกเลิก',
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                showLoading('กำลังบันทึก...');
+                try {
+                    let updatedStatus = null;
+                    const rsvpPayload = {
+                        action: '',
+                        userId: userProfile.userId,
+                        eventId: eventId,
+                        user_display_name: userProfile.displayName,
+                        user_picture_url: userProfile.pictureUrl
+                    };
+
+                    if (isDeleting) {
+                        rsvpPayload.action = 'deleteRsvp';
+                        await invokeFunction(rsvpPayload);
+                        delete userRsvps[eventId]; 
+                    } else {
+                        rsvpPayload.action = 'submitRsvp';
+                        rsvpPayload.status = newStatus;
+                        const data = await invokeFunction(rsvpPayload);
+                        userRsvps[eventId] = data.status; 
+                        updatedStatus = data.status;
+                    }
+                    
+                    updateCardUI(eventId, updatedStatus); 
+                    
+                    if (currentStatus === 'going' && updatedStatus !== 'going') {
+                         Swal.fire({
+                            icon: 'info',
+                            title: 'แจ้งเตือน',
+                            text: 'อย่าลืมลบกิจกรรมนี้ออกจาก Google Calendar ของคุณด้วยนะครับ',
+                         });
+                    }
+                    
+                } catch(err) {
+                    console.error("RSVP Error:", err);
+                    Swal.fire('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกการตอบรับได้', 'error');
+                } finally {
+                    hideLoading();
+                }
+            }
+        });
+    }
+    
+    function createShareFlexMessage(event) {
+        return {
+            "type": "flex",
+            "altText": `ชวนเข้าร่วมกิจกรรม: ${event.name}`,
+            "contents": {
+                "type": "bubble",
+                "hero": {
+                    "type": "image",
+                    "url": event.image_url || 'https://placehold.co/600x400/E5E7EB/9CA3AF?text=Event',
+                    "size": "full",
+                    "aspectRatio": "20:13",
+                    "aspectMode": "cover"
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "md",
+                    "contents": [
+                        { "type": "text", "text": event.name, "weight": "bold", "size": "xl", "wrap": true },
+                        {
+                            "type": "box", "layout": "vertical", "spacing": "sm", "margin": "lg",
+                            "contents": [
+                                { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [
+                                    { "type": "text", "text": "📅", "color": "#aaaaaa", "size": "sm", "flex": 1 },
+                                    { "type": "text", "text": formatDate(event.event_date) + " น.", "wrap": true, "color": "#666666", "size": "sm", "flex": 5 }
+                                ]},
+                                { "type": "box", "layout": "baseline", "spacing": "sm", "contents": [
+                                    { "type": "text", "text": "📍", "color": "#aaaaaa", "size": "sm", "flex": 1 },
+                                    { "type": "text", "text": event.location || 'ไม่ระบุสถานที่', "wrap": true, "color": "#666666", "size": "sm", "flex": 5 }
+                                ]}
+                            ]
+                        },
+                        { "type": "text", "text": event.description || '', "wrap": true, "size": "sm", "margin": "md", "color": "#666666"}
+                    ]
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        { 
+                            "type": "button", 
+                            "style": "link", 
+                            "height": "sm", 
+                            "action": { "type": "uri", "label": "ดูรายละเอียด & ตอบรับ", "uri": `https://liff.line.me/${LIFF_ID}` } 
+                        }
+                    ]
+                }
+            }
+        };
+    }
+
+    async function handleShareClick(e) {
+         const button = e.currentTarget; 
+        const eventId = Number(button.dataset.eventId);
+        
+        try {
+             const event = eventsData.find(ev => ev.id === eventId);
+             if (!event) throw new Error('ไม่พบข้อมูลกิจกรรม');
+             
+            if (!liff.isApiAvailable('shareTargetPicker')) {
+                 Swal.fire('ไม่รองรับการแชร์', 'เบราว์เซอร์ของคุณไม่รองรับฟังก์ชันนี้', 'warning');
+                return;
+            }
+
+            const flexMessage = createShareFlexMessage(event);
+            await liff.shareTargetPicker([flexMessage]);
+
+        } catch (err) {
+             console.error("Share Error:", err);
+             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถแชร์กิจกรรมได้', 'error');
+        }
+    }
+
+    function addToGoogleCalendar(e) {
+        const button = e.currentTarget;
+        const eventId = Number(button.dataset.eventId);
+        const event = eventsData.find(ev => ev.id === eventId);
+
+        if (!event) return;
+
+        const startTime = new Date(event.event_date);
+        const endTime = new Date(startTime.getTime() + (60 * 60 * 1000)); 
+
+        const googleCalendarUrl = new URL('https://www.google.com/calendar/render');
+        googleCalendarUrl.searchParams.set('action', 'TEMPLATE');
+        googleCalendarUrl.searchParams.set('text', event.name);
+        const formatForGoogle = (date) => date.toISOString().replace(/-|:|\.\d+/g, '');
+        googleCalendarUrl.searchParams.set('dates', `${formatForGoogle(startTime)}/${formatForGoogle(endTime)}`);
+        googleCalendarUrl.searchParams.set('details', event.description || '');
+        googleCalendarUrl.searchParams.set('location', event.location || '');
+        googleCalendarUrl.searchParams.set('ctz', 'Asia/Bangkok'); 
+
+        liff.openWindow({
+            url: googleCalendarUrl.toString(),
+            external: true
+        });
+    }
+
+    
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            showLoading('กำลังเริ่มต้น...');
+            await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+            if (!liff.isLoggedIn()) {
+                liff.login({ redirectUri: window.location.href });
+                return;
+            }
+
+            userProfile = await liff.getProfile();
+            
+            await loadEventsAndRsvps(); 
+
+        } catch(err) {
+            console.error("Initialization error:", err);
+            document.body.innerHTML = `<div class="p-8 text-center text-red-600">เกิดข้อผิดพลาดร้ายแรง: ${err.message}</div>`;
+        } finally {
+            hideLoading();
+        }
+    });
+    
+   
+     searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => {
+            loadEventsAndRsvps(searchInput.value.trim()); 
+        }, 500); 
+    });
+
+  </script>
+</body>
+</html>
