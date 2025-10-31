@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจองคิว (User)</title>
+    <meta name="description" content="NextQ LINE for MINI App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="NextQ LINE-T42-thailand" />
+    <meta property="og:description" content="NextQ LINE for MINI App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U69f69a6d9b1bbb632a0ff7db6e67eeac/1761888221050.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        
+        :root {
+            --color-bg-dark: #3f334d;
+            --color-bg-mid: #574b60;
+            --color-text-mid: #7d8491;
+            --color-text-light: #c0c5c1;
+            --color-accent: #eaf0ce;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, var(--color-bg-dark), var(--color-bg-mid));
+            color: var(--color-text-light);
+            overscroll-behavior: none;
+        }
+
+        
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        #loading-overlay img {
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        #loading-overlay p {
+            color: white;
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
+
+       
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 1.125rem;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active {
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, var(--color-accent), #dce4c2);
+            color: var(--color-bg-dark);
+        }
+        .btn-primary:hover {
+            filter: brightness(1.05);
+        }
+        .btn-danger {
+            background: linear-gradient(90deg, #ff6b6b, #ff8e8e);
+            color: white;
+        }
+        .btn-danger:hover {
+            filter: brightness(1.05);
+        }
+       
+        .btn-secondary {
+            background: linear-gradient(90deg, var(--color-bg-mid), var(--color-text-mid));
+            color: white;
+        }
+        .btn-secondary:hover {
+            filter: brightness(1.15);
+        }
+        .btn-secondary span {
+            vertical-align: middle;
+        }
+
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        .card-title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--color-text-light);
+            margin-bottom: 0.5rem;
+        }
+        .card-content-large {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--color-accent);
+            line-height: 1.2;
+        }
+        .card-content-mid {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+        .card-content-small {
+            font-size: 1rem;
+            color: var(--color-text-light);
+            margin-top: 0.25rem;
+        }
+        
+       
+        #banner-section {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9; 
+            overflow: hidden;
+            position: relative;
+        }
+        #banner-slider {
+            display: flex;
+            height: 100%;
+            transition: transform 1s ease-in-out;
+        }
+        .banner-slide {
+            width: 100%;
+            height: 100%;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+
+        
+        .swal2-popup {
+            background: var(--color-bg-dark) !important;
+            border-radius: 1rem !important;
+        }
+        .swal2-title {
+            color: var(--color-accent) !important;
+        }
+        .swal2-html-container {
+            color: var(--color-text-light) !important;
+        }
+        .swal2-confirm-button {
+            background: linear-gradient(90deg, var(--color-accent), #dce4c2) !important;
+            color: var(--color-bg-dark) !important;
+            border-radius: 0.5rem !important;
+            font-weight: 600 !important;
+        }
+         .swal2-cancel-button {
+            background: linear-gradient(90deg, #ff6b6b, #ff8e8e) !important;
+            color: white !important;
+            border-radius: 0.5rem !important;
+            font-weight: 600 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6">
+
+    
+    <div id="loading-overlay">
+        <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." loading="lazy">
+        <p id="loading-text">กำลังโหลด...</p>
+    </div>
+
+    
+    <main id="main-content" class="max-w-md mx-auto opacity-0" style="transition: opacity 0.5s ease;">
+        
+      
+        <header class="flex items-center space-x-3 mb-6 card !p-4">
+            <img id="user-picture" src="https://placehold.co/60x60/574b60/eaf0ce?text=Q" alt="User Profile" class="w-14 h-14 rounded-full border-2 border-[var(--color-accent)]" loading="lazy">
+            <div>
+                <h1 class="text-xl font-bold text-white">สวัสดี, <span id="user-name">คุณ</span></h1>
+                <p class="text-sm text-[var(--color-text-light)]">ระบบจองคิวออนไลน์</p>
+            </div>
+        </header>
+        
+       
+        <section id="banner-section" class="card !p-0 overflow-hidden mb-6">
+            <div id="banner-slider">
+                <!-- แก้ banner ตรงนี้ -->
+                <img class="banner-slide" src="https://i.pinimg.com/736x/97/15/38/971538677bebc798e80cdb9189b1506e.jpg" alt="Promotion 1" loading="lazy">
+                <img class="banner-slide" src="https://i.pinimg.com/1200x/74/ad/67/74ad672b3fd50f6ef5ab82ff6e58f9ae.jpg" alt="New Menu" loading="lazy">
+                <img class="banner-slide" src="https://i.pinimg.com/1200x/7f/f9/49/7ff949f12165cdeebe6cbd135d0f1be1.jpg" alt="Open Everyday" loading="lazy">
+            </div>
+        </section>
+
+      
+        <section class="card text-center" id="current-serving-card">
+            <h2 class="card-title">คิวที่กำลังให้บริการ</h2>
+            <p id="current-serving-number" class="card-content-large">...</p>
+            <p class="card-content-small animation-pulse">อัปเดตอัตโนมัติ</p>
+        </section>
+
+      
+        <section class="card text-center" id="your-queue-card">
+            <h2 class="card-title">คิวของคุณ</h2>
+            <div id="your-queue-info" class="hidden">
+                <p id="your-queue-number" class="card-content-mid">...</p>
+                <p id="your-queue-status" class="card-content-small mt-2 font-semibold">...</p>
+            </div>
+            <div id="no-queue-info">
+                <p class="card-content-mid text-gray-300">-</p>
+                <p class="card-content-small">คุณยังไม่มีคิว</p>
+            </div>
+        </section>
+
+       
+        <footer class="mt-6 space-y-4">
+            <button id="btn-request-queue" class="btn btn-primary">จองคิว</button>
+            
+         
+            <!-- เปลี่ยนลิ้งค์เมนู -->
+            <a id="btn-menu" href="https://i.pinimg.com/736x/7e/e7/99/7ee79984f367cffca752f1853ef80709.jpg" target="_blank" class="btn btn-secondary">
+                <span>ดูเมนู / โปรโมชั่น</span>
+            </a>
+
+            <button id="btn-cancel-queue" class="btn btn-danger hidden">ยกเลิกคิว</button>
+        </footer>
+
+    </main>
+
+    <script type="module">
+        
+        const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+        const USER_LIFF_ID = "2007934888-1aNZ0POn";
+        const API_FUNCTION_NAME = 'api'; 
+
+        
+        let supabase;
+        let lineUserId = null;
+        let displayName = "User";
+        let pictureUrl = "https://placehold.co/60x60/574b60/eaf0ce?text=Q";
+        let myQueue = null;
+        let bannerSlides = []; 
+        let currentSlideIndex = 0; 
+
+       
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const mainContent = document.getElementById('main-content');
+        const userNameEl = document.getElementById('user-name');
+        const userPictureEl = document.getElementById('user-picture');
+        const currentServingNumberEl = document.getElementById('current-serving-number');
+        const yourQueueInfoEl = document.getElementById('your-queue-info');
+        const noQueueInfoEl = document.getElementById('no-queue-info');
+        const yourQueueNumberEl = document.getElementById('your-queue-number');
+        const yourQueueStatusEl = document.getElementById('your-queue-status');
+        const btnRequestQueue = document.getElementById('btn-request-queue');
+        const btnCancelQueue = document.getElementById('btn-cancel-queue');
+        const bannerSlider = document.getElementById('banner-slider'); 
+
+  
+        function showLoading(message) {
+            loadingText.textContent = message;
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = 1;
+        }
+
+        function hideLoading() {
+            loadingOverlay.style.opacity = 0;
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        function showError(title, text) {
+            Swal.fire({
+                icon: 'error',
+                title: title,
+                text: text,
+            });
+        }
+
+    
+        async function initializeLiff() {
+            try {
+                showLoading("กำลังเชื่อมต่อกับ LINE...");
+                await liff.init({ liffId: USER_LIFF_ID, withLoginOnExternalBrowser: true  });
+                
+                if (!liff.isLoggedIn()) {
+                    showLoading("กรุณาเข้าสู่ระบบ...");
+                    liff.login({ redirectUri: window.location.href });
+                    return; 
+                }
+
+                const profile = await liff.getProfile();
+                lineUserId = profile.userId;
+                displayName = profile.displayName;
+                pictureUrl = profile.pictureUrl;
+
+               
+                userNameEl.textContent = displayName;
+                userPictureEl.src = pictureUrl;
+                userPictureEl.onerror = () => { userPictureEl.src = 'https://placehold.co/60x60/574b60/eaf0ce?text=Q'; };
+
+            } catch (error) {
+                console.error('LIFF Init Error:', error);
+                showError('LIFF Error', 'ไม่สามารถเริ่มต้น LIFF ได้: ' + error.message);
+                showLoading('เกิดข้อผิดพลาด'); 
+            }
+        }
+
+      
+        function initializeSupabase() {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } catch (error) {
+                console.error('Supabase Init Error:', error);
+                showError('Supabase Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+                showLoading('เกิดข้อผิดพลาด'); 
+            }
+        }
+
+       
+        async function fetchInitialData() {
+            if (!lineUserId) return;
+            
+            showLoading("กำลังตรวจสอบคิว...");
+            try {
+                
+                const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: { 
+                        action: 'get-my-queue',
+                        payload: { lineUserId: lineUserId }
+                    },
+                });
+
+                if (error) throw error;
+                if (data.error) throw new Error(data.error);
+
+                if (data.queue) {
+                    myQueue = data.queue;
+                    updateUiForExistingQueue(myQueue);
+                } else {
+                    myQueue = null;
+                    updateUiForNewQueue();
+                }
+
+                updateCurrentServing(data.currentServing?.current_serving_number || 0);
+
+            } catch (error) {
+                console.error('Fetch Data Error:', error);
+                showError('ข้อผิดพลาด', 'ไม่สามารถดึงข้อมูลคิวได้: ' + error.message);
+            } finally {
+                hideLoading();
+                mainContent.style.opacity = 1; 
+            }
+        }
+
+       
+        async function handleRequestQueue() {
+            showLoading("กำลังจองคิว...");
+            try {
+               
+                const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: {
+                        action: 'request-queue',
+                        payload: {
+                            lineUserId: lineUserId,
+                            displayName: displayName,
+                            pictureUrl: pictureUrl
+                        }
+                    }
+                });
+
+                if (error) throw new Error(error.message);
+                if (data.error) throw new Error(data.error);
+
+                myQueue = data.newQueue;
+                updateUiForExistingQueue(myQueue);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'จองคิวสำเร็จ!',
+                    text: `คุณได้คิวหมายเลข ${myQueue.queue_number}`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                console.error('Request Queue Error:', error);
+                showError('จองคิวไม่สำเร็จ', error.message || 'กรุณาลองใหม่อีกครั้ง');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        
+        async function handleCancelQueue() {
+          
+            const result = await Swal.fire({
+                title: 'ยืนยันการยกเลิก',
+                text: "คุณต้องการยกเลิกคิวของคุณใช่หรือไม่?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ยกเลิก',
+                cancelButtonText: 'ไม่'
+            });
+
+            if (result.isConfirmed) {
+                showLoading("กำลังยกเลิกคิว...");
+                try {
+                
+                    const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                        body: { 
+                            action: 'cancel-my-queue',
+                            payload: { lineUserId: lineUserId }
+                        }
+                    });
+
+                    if (error) throw new Error(error.message);
+                    if (data.error) throw new Error(data.error);
+
+                    myQueue = null;
+                    updateUiForNewQueue();
+                    Swal.fire(
+                        'ยกเลิกสำเร็จ',
+                        'คิวของคุณถูกยกเลิกแล้ว',
+                        'success'
+                    );
+
+                } catch (error) {
+                    console.error('Cancel Queue Error:', error);
+                    showError('ยกเลิกไม่สำเร็จ', error.message || 'กรุณาลองใหม่อีกครั้ง');
+                } finally {
+                    hideLoading();
+                }
+            }
+        }
+
+
+        function updateUiForExistingQueue(queue) {
+            yourQueueInfoEl.classList.remove('hidden');
+            noQueueInfoEl.classList.add('hidden');
+            yourQueueNumberEl.textContent = queue.queue_number;
+            
+            let statusText = '';
+            switch(queue.status) {
+                case 'WAITING': statusText = 'สถานะ: กำลังรอ'; break;
+                case 'CALLED': statusText = 'สถานะ: ถึงคิวคุณแล้ว!'; break;
+                case 'SKIPPED': statusText = 'สถานะ: ถูกข้าม'; break;
+                case 'CANCELLED': statusText = 'สถานะ: ยกเลิกแล้ว'; break;
+                default: statusText = `สถานะ: ${queue.status}`;
+            }
+            yourQueueStatusEl.textContent = statusText;
+
+            if (queue.status === 'WAITING') {
+                btnRequestQueue.classList.add('hidden');
+                btnCancelQueue.classList.remove('hidden');
+            } else {
+                if (queue.status === 'CANCELLED' || queue.status === 'SKIPPED') {
+                    updateUiForNewQueue();
+                } else {
+                    
+                    btnRequestQueue.classList.add('hidden');
+                    btnCancelQueue.classList.add('hidden');
+                }
+            }
+        }
+
+        function updateUiForNewQueue() {
+            yourQueueInfoEl.classList.add('hidden');
+            noQueueInfoEl.classList.remove('hidden');
+            btnRequestQueue.classList.remove('hidden');
+            btnCancelQueue.classList.add('hidden');
+        }
+
+        function updateCurrentServing(queueNumber) {
+            currentServingNumberEl.textContent = queueNumber || "0";
+        }
+
+        function startBannerSlider() {
+            if (!bannerSlider) return;
+            bannerSlides = bannerSlider.children;
+            if (bannerSlides.length <= 1) return; 
+
+            setInterval(() => {
+                currentSlideIndex = (currentSlideIndex + 1) % bannerSlides.length;
+                bannerSlider.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
+            }, 5000); 
+        }
+
+      
+        function setupRealtimeSubscriptions() {
+            if (!supabase) return;
+
+           
+            const serviceChannel = supabase
+                .channel('queue-service-status-changes')
+                .on(
+                    'postgres_changes',
+                    { event: 'UPDATE', schema: 'public', table: 'queue_service_status', filter: 'id=eq.1' },
+                    (payload) => {
+                        console.log('Service status changed:', payload.new);
+                        updateCurrentServing(payload.new.current_serving_number);
+                    }
+                )
+                .subscribe();
+
+            if (lineUserId) {
+                const myQueueChannel = supabase
+                    .channel('my-queue-changes')
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: 'queues', filter: `line_user_id=eq.${lineUserId}` },
+                        (payload) => {
+                            console.log('My queue changed:', payload);
+                            
+                            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                                const updatedQueue = payload.new;
+                                myQueue = updatedQueue;
+                                updateUiForExistingQueue(myQueue);
+                            } else if (payload.eventType === 'DELETE') {
+                                myQueue = null;
+                                updateUiForNewQueue();
+                            }
+                        }
+                    )
+                    .subscribe();
+            }
+        }
+
+    
+        window.addEventListener('load', async () => {
+            await initializeLiff();
+            initializeSupabase();
+            
+            if (lineUserId && supabase) {
+                await fetchInitialData();
+                setupRealtimeSubscriptions();
+            }
+            
+            startBannerSlider(); 
+
+          
+            btnRequestQueue.addEventListener('click', handleRequestQueue);
+            btnCancelQueue.addEventListener('click', handleCancelQueue);
+        });
+
+    </script>
+</body>
+</html>
