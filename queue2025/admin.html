@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการคิว (Admin)</title>
+    <meta name="description" content="Admin NextQ LINE for MINI App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="Admin NextQ LINE-T42-thailand" />
+    <meta property="og:description" content="Admin NextQ LINE for MINI App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U69f69a6d9b1bbb632a0ff7db6e67eeac/1761888221050.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+       
+        :root {
+            --color-bg-dark: #3f334d;
+            --color-bg-mid: #574b60;
+            --color-text-mid: #7d8491;
+            --color-text-light: #c0c5c1;
+            --color-accent: #eaf0ce;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, var(--color-bg-dark), var(--color-bg-mid));
+            color: var(--color-text-light);
+        }
+        #loading-overlay {
+            position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.7);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 0.3s ease; backdrop-filter: blur(5px);
+        }
+        #loading-overlay img {
+            width: 60px; height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        #loading-overlay p { color: white; margin-top: 1rem; font-size: 1rem; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .swal2-popup { background: var(--color-bg-dark) !important; border-radius: 1rem !important; }
+        .swal2-title { color: var(--color-accent) !important; }
+        .swal2-html-container { color: var(--color-text-light) !important; }
+        .swal2-confirm-button {
+             background: linear-gradient(90deg, var(--color-accent), #dce4c2) !important;
+             color: var(--color-bg-dark) !important; border-radius: 0.5rem !important; font-weight: 600 !important;
+        }
+        .swal2-cancel-button {
+             background: linear-gradient(90deg, #ff6b6b, #ff8e8e) !important;
+             color: white !important; border-radius: 0.5rem !important; font-weight: 600 !important;
+        }
+        
+       
+        .admin-header {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+        .queue-list-item {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.3s ease;
+        }
+        .queue-list-item[data-status="CALLED"] {
+            background-color: rgba(234, 240, 206, 0.2);
+            border-left: 5px solid var(--color-accent);
+        }
+        .queue-list-item[data-status="SKIPPED"],
+        .queue-list-item[data-status="CANCELLED"] {
+            background-color: rgba(125, 132, 145, 0.2);
+            opacity: 0.6;
+        }
+        
+        .btn-admin {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 0.5rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-admin:active {
+            transform: scale(0.95);
+        }
+        .btn-admin-call {
+            background-color: var(--color-accent);
+            color: var(--color-bg-dark);
+        }
+        .btn-admin-skip {
+            background-color: var(--color-text-mid);
+            color: white;
+        }
+        .btn-admin-cancel {
+            background-color: #ff6b6b;
+            color: white;
+        }
+        .btn-admin-clear {
+             background: linear-gradient(90deg, #ff6b6b, #ff8e8e);
+             color: white;
+             padding: 0.75rem 1rem;
+             font-weight: 700;
+             border-radius: 0.5rem;
+             width: 100%;
+             margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6">
+
+    <div id="loading-overlay">
+        <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." loading="lazy">
+        <p id="loading-text">กำลังโหลด...</p>
+    </div>
+
+    <div id="access-denied" class="hidden text-center p-10">
+        <h1 class="text-2xl font-bold text-red-400">Access Denied</h1>
+        <p class="text-lg text-gray-300 mt-2">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+    </div>
+
+    <main id="admin-content" class="max-w-2xl mx-auto opacity-0" style="transition: opacity 0.5s ease;">
+        <header class="admin-header">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Admin Dashboard</h1>
+                    <p class="text-sm text-[var(--color-text-light)]">จัดการคิวของวันนี้</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-lg font-bold text-[var(--color-accent)]">คิวทั้งหมด</p>
+                    <p id="queue-count" class="text-3xl font-extrabold text-white">0</p>
+                </div>
+            </div>
+            <button id="btn-call-next" class="btn-admin btn-admin-call w-full mt-4 !text-lg !py-3">
+                เรียกคิวถัดไป (Next WAITING)
+            </button>
+        </header>
+
+        <section>
+            <h2 class="text-lg font-semibold mb-3">รายการคิว</h2>
+            <div id="queue-list" class="max-h-[60vh] overflow-y-auto pr-2">
+                <!-- Queue items will be injected here by JS -->
+                <p id="no-queues-message" class="text-center text-gray-400 py-5">ยังไม่มีคิวในวันนี้</p>
+            </div>
+        </section>
+
+        <footer class="mt-6">
+            <button id="btn-clear-all" class="btn-admin-clear">
+                เคลียร์คิวทั้งหมด (ปิดร้าน)
+            </button>
+        </footer>
+    </main>
+
+    <script type="module">
+      
+        const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+        const ADMIN_LIFF_ID = "2007934888-qoNYO4Rg";
+        const API_FUNCTION_NAME = 'api';
+        
+        const POLLING_INTERVAL_MS = 5000; 
+
+        let supabase;
+        let lineUserId = null;
+
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const adminContent = document.getElementById('admin-content');
+        const accessDenied = document.getElementById('access-denied');
+        const queueCountEl = document.getElementById('queue-count');
+        const queueListEl = document.getElementById('queue-list');
+        const noQueuesMessage = document.getElementById('no-queues-message');
+        const btnCallNext = document.getElementById('btn-call-next');
+        const btnClearAll = document.getElementById('btn-clear-all');
+
+        function showLoading(message) {
+            loadingText.textContent = message;
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = 1;
+        }
+        function hideLoading() {
+            loadingOverlay.style.opacity = 0;
+            setTimeout(() => { loadingOverlay.style.display = 'none'; }, 300);
+        }
+        function showError(title, text) {
+            Swal.fire({ icon: 'error', title: title, text: text });
+        }
+
+        async function initializeLiffAndAuth() {
+            try {
+                showLoading("กำลังยืนยันตัวตน...");
+                await liff.init({ liffId: ADMIN_LIFF_ID, withLoginOnExternalBrowser: true  });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return false;
+                }
+
+                const profile = await liff.getProfile();
+                lineUserId = profile.userId;
+
+             
+                const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: { 
+                        action: 'check-admin-auth',
+                        payload: { lineUserId: lineUserId }
+                    }
+                });
+
+                if (error || !data.isAdmin) {
+                    showLoading("คุณไม่มีสิทธิ์");
+                    adminContent.classList.add('hidden');
+                    accessDenied.classList.remove('hidden');
+                    hideLoading();
+                    return false;
+                }
+
+                return true;
+
+            } catch (error) {
+                console.error('Auth Error:', error);
+                showError('Auth Error', 'ไม่สามารถยืนยันตัวตนได้: ' + error.message);
+                return false;
+            }
+        }
+
+        function initializeSupabase() {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } catch (error) {
+                console.error('Supabase Init Error:', error);
+                showError('Supabase Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+            }
+        }
+
+        async function fetchAllQueues(silent = false) {
+            if (!silent) {
+                showLoading("กำลังโหลดรายการคิว...");
+            }
+            try {
+                const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: {
+                        action: 'get-all-queues-today',
+                        payload: {} 
+                    }
+                });
+                if (error) throw error;
+                if (data.error) throw new Error(data.error);
+                
+                renderQueueList(data.queues);
+
+            } catch (error) {
+                console.error('Fetch Queues Error:', error);
+               
+                if (!silent) {
+                    showError('ผิดพลาด', 'ไม่สามารถโหลดรายการคิวได้');
+                }
+            } finally {
+                if (!silent) {
+                    hideLoading();
+                }
+            }
+        }
+
+        function renderQueueList(queues) {
+            queueListEl.innerHTML = ''; 
+            
+            if (!queues || queues.length === 0) {
+                queueListEl.appendChild(noQueuesMessage);
+                noQueuesMessage.classList.remove('hidden');
+                queueCountEl.textContent = "0";
+                return;
+            }
+            
+            noQueuesMessage.classList.add('hidden');
+            queueCountEl.textContent = queues.length;
+
+            queues.forEach(q => {
+                const item = document.createElement('div');
+                item.className = 'queue-list-item';
+                item.setAttribute('data-id', q.id);
+                item.setAttribute('data-status', q.status);
+
+                item.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <img src="${q.picture_url || 'https://placehold.co/40x40/574b60/eaf0ce?text=Q'}" alt="pic" class="w-10 h-10 rounded-full" loading="lazy">
+                        <div>
+                            <p class="text-lg font-bold text-white">Q: ${q.queue_number}</p>
+                            <p class="text-sm text-gray-300">${q.display_name} (${q.status})</p>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        ${q.status === 'WAITING' ? `
+                            <button class="btn-admin btn-admin-call" data-action="admin-call-specific" data-id="${q.id}">เรียก</button>
+                            <button class="btn-admin btn-admin-skip" data-action="admin-skip-queue" data-id="${q.id}">ข้าม</button>
+                        ` : ''}
+                        ${q.status !== 'CANCELLED' ? `
+                            <button class="btn-admin btn-admin-cancel" data-action="admin-cancel-queue" data-id="${q.id}">ยกเลิก</button>
+                        ` : ''}
+                    </div>
+                `;
+                queueListEl.appendChild(item);
+            });
+        }
+
+      
+        async function handleListClick(e) {
+            const target = e.target;
+            const actionName = target.dataset.action;
+            const id = target.dataset.id;
+
+            if (!actionName || !id) return;
+
+            let loadingMessage = '';
+            let confirmTitle = '';
+
+            switch (actionName) {
+                case 'admin-call-specific':
+                    loadingMessage = 'กำลังเรียกคิว...';
+                    confirmTitle = 'ยืนยันการเรียกคิวนี้?';
+                    break;
+                case 'admin-skip-queue':
+                    loadingMessage = 'กำลังข้ามคิว...';
+                    confirmTitle = 'ยืนยันการข้ามคิวนี้?';
+                    break;
+                case 'admin-cancel-queue':
+                    loadingMessage = 'กำลังยกเลิกคิว...';
+                    confirmTitle = 'ยืนยันการยกเลิกคิวนี้?';
+                    break;
+                default:
+                    return; 
+            }
+
+            const result = await Swal.fire({
+                title: confirmTitle,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'ยืนยัน',
+                cancelButtonText: 'ยกเลิก'
+            });
+            
+            if (!result.isConfirmed) return;
+
+            showLoading(loadingMessage);
+            try {
+                const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: { 
+                        action: actionName,
+                        payload: { queueId: id, lineUserId: lineUserId }
+                    }
+                });
+                if (error) throw new Error(error.message);
+                if (data.error) throw new Error(data.error);
+
+                Swal.fire('สำเร็จ!', data.message, 'success');
+                
+                await fetchAllQueues(true); 
+
+            } catch (error) {
+                showError('ผิดพลาด', error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function handleCallNext() {
+            showLoading("กำลังเรียกคิวถัดไป...");
+            try {
+                 const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                    body: { 
+                        action: 'admin-call-next',
+                        payload: { lineUserId: lineUserId }
+                    }
+                });
+                if (error) throw new Error(error.message);
+                if (data.error) throw new Error(data.error);
+
+                Swal.fire('เรียกคิวสำเร็จ!', data.message, 'success');
+
+                await fetchAllQueues(true); 
+
+            } catch (error) {
+                showError('ผิดพลาด', error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function handleClearAll() {
+            const result = await Swal.fire({
+                title: 'ยืนยันการล้างคิวทั้งหมด',
+                text: "คิวของวันนี้ทั้งหมดจะถูกลบ! (ใช้ตอนปิดร้าน)",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลบทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#d33',
+            });
+
+            if (result.isConfirmed) {
+                showLoading("กำลังล้างคิวทั้งหมด...");
+                try {
+                    const { data, error } = await supabase.functions.invoke(API_FUNCTION_NAME, {
+                        body: { 
+                            action: 'admin-clear-all',
+                            payload: { lineUserId: lineUserId }
+                        }
+                    });
+                    if (error) throw new Error(error.message);
+                    if (data.error) throw new Error(data.error);
+                    
+                    Swal.fire('สำเร็จ!', 'คิวทั้งหมดถูกลบแล้ว', 'success');
+                
+                    await fetchAllQueues(true); 
+
+                } catch (error) {
+                    showError('ผิดพลาด', error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            initializeSupabase();
+            if (!supabase) return;
+
+            const isAdmin = await initializeLiffAndAuth();
+            
+            if (isAdmin) {
+              
+                await fetchAllQueues(false); 
+               
+                setInterval(() => fetchAllQueues(true), POLLING_INTERVAL_MS);
+                
+                adminContent.style.opacity = 1;
+
+                queueListEl.addEventListener('click', handleListClick);
+                btnCallNext.addEventListener('click', handleCallNext);
+                btnClearAll.addEventListener('click', handleClearAll);
+            }
+        });
+
+    </script>
+</body>
+</html>
