@@ -714,42 +714,76 @@
                 aspectRatioString = `${dimensions.width}:${dimensions.height}`;
             }
 
-            return {
-                "type": "flex",
-                "altText": "ส่งวิดีโอใหม่ " + fileName,
-                "contents": {
-                    "type": "bubble",
-                    "size": "giga",
-                    "hero": {
-                        "type": "video",
-                        "url": videoUrl,
-                        "previewUrl": thumbnailUrl,
-                        "altContent": { 
-                            "type": "image", 
-                            "size": "full", 
-                            "aspectRatio": aspectRatioString, 
-                            "aspectMode": "fit", 
-                            "url": thumbnailUrl 
-                        },
-                        "aspectRatio": aspectRatioString
-                    },
-                    "body": {
-                        "type": "box", "layout": "vertical", "backgroundColor": "#3f334d",
-                        "contents": [
-                            { "type": "text", "text": "วิดีโอใหม่", "weight": "bold", "size": "xl", "color": "#eaf0ce" },
-                            { "type": "text", "text": "โปรโมชั่นเดือนนี้", "color": "#c0c5c1", "size": "sm", "wrap": true, "margin": "md" }
-                        ]
-                    },
-                    "footer": {
-                        "type": "box", "layout": "vertical", "backgroundColor": "#3f334d", "spacing": "sm",
-                        "contents": [
-                            { "type": "button", "style": "primary", "height": "sm", "action": { "type": "uri", "label": "คลิกเลย", "uri": "https://google.com" }, "color": "#574b60", "gravity": "center" }
-                        ]
-                    }
-                }
-            };
-        }
-        
+        //     return {
+        //         "type": "flex",
+        //         "altText": "ส่งวิดีโอใหม่ " + fileName,
+        //         "contents": {
+        //             "type": "bubble",
+        //             "size": "giga",
+        //             "hero": {
+        //                 "type": "video",
+        //                 "url": videoUrl,
+        //                 "previewUrl": thumbnailUrl,
+        //                 "altContent": { 
+        //                     "type": "image", 
+        //                     "size": "full", 
+        //                     "aspectRatio": aspectRatioString, 
+        //                     "aspectMode": "fit", 
+        //                     "url": thumbnailUrl 
+        //                 },
+        //                 "aspectRatio": aspectRatioString
+        //             },
+        //             "body": {
+        //                 "type": "box", "layout": "vertical", "backgroundColor": "#3f334d",
+        //                 "contents": [
+        //                     { "type": "text", "text": "วิดีโอใหม่", "weight": "bold", "size": "xl", "color": "#eaf0ce" },
+        //                     { "type": "text", "text": "โปรโมชั่นเดือนนี้", "color": "#c0c5c1", "size": "sm", "wrap": true, "margin": "md" }
+        //                 ]
+        //             },
+        //             "footer": {
+        //                 "type": "box", "layout": "vertical", "backgroundColor": "#3f334d", "spacing": "sm",
+        //                 "contents": [
+        //                     { "type": "button", "style": "primary", "height": "sm", "action": { "type": "uri", "label": "คลิกเลย", "uri": "https://google.com" }, "color": "#574b60", "gravity": "center" }
+        //                 ]
+        //             }
+        //         }
+        //     };
+        // }
+        {
+    "type": "flex",
+    "altText": "ส่งวิดีโอใหม่ " + fileName,
+  "contents": {
+  "type": "bubble",
+  "size": "giga",
+  "hero": {
+    "type": "video",
+    "url": videoUrl,
+    "previewUrl": thumbnailUrl,
+    "altContent": {
+      "type": "image",
+      "size": "full",
+      "aspectRatio": aspectRatioString,
+      "aspectMode": "fit",
+      "url": thumbnailUrl,
+    }
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "button",
+        "action": {
+          "type": "uri",
+          "label": "action",
+          "uri": "http://linecorp.com/"
+        },
+        "style": "primary"
+      }
+    ],
+    "backgroundColor": "#3C3C3Cbb"
+  }
+}}
         
         function resetUploader() {
             fileInput.value = '';
