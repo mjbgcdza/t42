@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Uploader & Share Flex</title>
+    <meta name="description" content="Video Uploader & Share Flex for MINI App" />
+    <meta name="author" content="iton5" />
+    <meta property="og:title" content="Video Uploader & Share Flex-T42-thailand" />
+    <meta property="og:description" content="Video Uploader & Share Flex for MINI App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U48c16d105f55ec3ad6a6b52f72142abd/1762195495389.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+   
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        
+        :root {
+            --color-bg-dark: #3f334d;
+            --color-bg-mid: #574b60;
+            --color-text-mid: #7d8491;
+            --color-text-light: #c0c5c1;
+            --color-accent: #eaf0ce;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: linear-gradient(135deg, var(--color-bg-dark), var(--color-bg-mid));
+            color: var(--color-text-light);
+            overscroll-behavior: none;
+        }
+
+       
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        #loading-overlay img {
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        #loading-overlay p {
+            color: white;
+            margin-top: 1rem;
+            font-size: 1rem;
+        }
+
+       
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+       
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 1.125rem;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--color-text-mid);
+        }
+        .btn:active:not(:disabled) {
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(90deg, var(--color-accent), #dce4c2);
+            color: var(--color-bg-dark);
+        }
+        .btn-primary:hover:not(:disabled) {
+            filter: brightness(1.05);
+        }
+        
+        
+        .file-input-wrapper {
+            position: relative;
+            width: 100%;
+            height: 12rem; 
+            border: 3px dashed var(--color-text-mid);
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: rgba(0,0,0,0.1);
+        }
+        .file-input-wrapper:hover {
+            border-color: var(--color-accent);
+            background-color: rgba(0,0,0,0.2);
+        }
+        #file-input {
+            opacity: 0;
+            position: absolute;
+            inset: 0;
+            cursor: pointer;
+        }
+        .file-input-wrapper svg {
+            width: 3rem; 
+            height: 3rem;
+            color: var(--color-text-light);
+            transition: all 0.3s ease;
+        }
+        .file-input-wrapper:hover svg {
+            color: var(--color-accent);
+        }
+
+       
+        #preview-area {
+            display: none; 
+            width: 100%;
+            aspect-ratio: 16 / 9; 
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-top: 1rem;
+            border: 2px solid var(--color-accent);
+        }
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        
+        .swal2-popup { background: var(--color-bg-dark) !important; border-radius: 1rem !important; }
+        .swal2-title { color: var(--color-accent) !important; }
+        .swal2-html-container { color: var(--color-text-light) !important; }
+        .swal2-confirm-button {
+            background: linear-gradient(90deg, var(--color-accent), #dce4c2) !important;
+            color: var(--color-bg-dark) !important;
+            border-radius: 0.5rem !important;
+            font-weight: 600 !important;
+        }
+      
+        .swal2-cancel-button {
+            background-color: var(--color-text-mid) !important;
+            color: var(--color-text-light) !important;
+            border-radius: 0.5rem !important;
+            font-weight: 600 !important;
+        }
+        
+       
+        #history-section {
+            margin-top: 2rem;
+            animation: fadeIn 0.5s ease-out 0.2s forwards;
+            opacity: 0; 
+        }
+        
+      
+        #search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            border: 2px solid var(--color-text-mid);
+            background-color: var(--color-bg-mid);
+            color: var(--color-text-light);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+            appearance: none;
+        }
+        #search-input:focus {
+            border-color: var(--color-accent);
+            background-color: var(--color-bg-dark);
+            box-shadow: 0 0 0 3px rgba(234, 240, 206, 0.3);
+        }
+        
+       
+        #history-list {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: 1fr; 
+            gap: 1rem;
+            max-height: 400px; 
+            overflow-y: auto; 
+            padding-right: 0.25rem; 
+        }
+        
+        
+        .history-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; 
+            gap: 0.5rem; 
+            background-color: rgba(0,0,0,0.15);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            padding-right: 0.75rem; 
+        }
+        .history-item:hover {
+            background-color: rgba(0,0,0,0.3);
+        }
+
+       
+        .history-item-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-grow: 1;
+            overflow: hidden; 
+            cursor: pointer;
+        }
+        
+        .history-thumbnail {
+            width: 100px;
+            height: 60px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border-right: 2px solid var(--color-bg-mid);
+        }
+        
+        .history-info {
+            flex-grow: 1;
+            overflow: hidden; 
+        }
+      
+        
+        .history-filename {
+            font-weight: 600;
+            color: var(--color-text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .history-date {
+            font-size: 0.875rem;
+            color: var(--color-text-mid);
+        }
+
+        
+        .delete-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--color-text-mid);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            flex-shrink: 0; 
+        }
+        .delete-btn:hover {
+            background-color: rgba(255, 82, 82, 0.2);
+            color: #ff5252; 
+        }
+        .delete-btn svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+        
+        #history-status {
+            text-align: center;
+            padding: 1rem;
+            color: var(--color-text-mid);
+        }
+
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6">
+
+    
+    <div id="loading-overlay" style="display: none;">
+        <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." loading="lazy">
+        <p id="loading-text">กำลังโหลด...</p>
+    </div>
+
+    
+    <main id="main-content" class="max-w-md mx-auto" style="animation: fadeIn 0.5s ease-out forwards;">
+        
+        
+        <header class="flex items-center space-x-3 mb-6">
+            <img id="user-picture" src="https://placehold.co/60x60/574b60/eaf0ce?text=VDO" alt="User Profile" class="w-14 h-14 rounded-full border-2 border-[var(--color-accent)]" loading="lazy">
+            <div>
+                <h1 class="text-xl font-bold text-white">Video Uploader</h1>
+                <p class="text-sm text-[var(--color-text-light)]">อัปโหลดและแชร์วิดีโอ</p>
+            </div>
+        </header>
+
+       
+        <section class="card">
+            <label for="file-input" class="file-input-wrapper" id="file-drop-area">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H4.5A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+                <p class="text-center text-lg font-semibold mt-2" id="file-label">แตะเพื่อเลือกวิดีโอ</p>
+                <p class="text-sm text-[var(--color-text-mid)]">(สูงสุด 50MB)</p>
+                <input type="file" id="file-input" accept="video/mp4,video/quicktime,.mov,video/*" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer">
+            </label>
+
+            
+            <div id="preview-area">
+                <video id="video-preview" controls muted playsinline></video>
+            </div>
+            
+            
+            <video id="video-processor" muted playsinline style="display: none;"></video>
+            <canvas id="canvas-processor" style="display: none;"></canvas>
+
+        </section>
+
+       
+        <footer class="mt-6">
+            <button id="btn-share" class="btn btn-primary" disabled>
+                อัปโหลด และ แชร์
+            </button>
+        </footer>
+        
+        
+        <section id="history-section">
+            <h2 class="text-lg font-bold text-white mb-3">ประวัติการแชร์</h2>
+            
+            <input type="search" id="search-input" placeholder="ค้นหาตามชื่อไฟล์...">
+            
+            
+            <div id="history-list">
+               
+            </div>
+            <p id="history-status">กำลังโหลดประวัติ...</p>
+        </section>
+
+    </main>
+
+    <script type="module">
+       
+        const LIFF_ID = "2007934888-V5ZnjxLo";
+        const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+        const STORAGE_BUCKET_NAME = 'media';
+        const HISTORY_TABLE_NAME = 'video_shares';
+
+        
+        let supabase;
+        let lineUserId = null;
+        let videoFile = null;
+        let thumbnailBlob = null; 
+        let videoDimensions = { width: 0, height: 0 };
+        let shareTargetPickerAvailable = false;
+        let searchDebounceTimer = null;
+
+       
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const fileInput = document.getElementById('file-input');
+        const fileLabel = document.getElementById('file-label');
+        const btnShare = document.getElementById('btn-share');
+        const userPictureEl = document.getElementById('user-picture');
+        
+        const previewArea = document.getElementById('preview-area');
+        const videoPreview = document.getElementById('video-preview');
+
+        const videoProcessor = document.getElementById('video-processor');
+        const canvasProcessor = document.getElementById('canvas-processor');
+        
+        const searchInput = document.getElementById('search-input');
+        const historyList = document.getElementById('history-list');
+        const historyStatus = document.getElementById('history-status');
+        
+        
+        function showLoading(message) {
+            loadingText.textContent = message;
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = 1;
+        }
+
+        function hideLoading() {
+            loadingOverlay.style.opacity = 0;
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 300);
+        }
+
+        function showError(title, text) {
+            Swal.fire({ icon: 'error', title: title, text: text });
+        }
+        
+        function showSuccess(title, text) {
+            Swal.fire({ icon: 'success', title: title, text: text });
+        }
+
+       
+        async function initializeLiff() {
+            try {
+                showLoading("กำลังเชื่อมต่อกับ LINE...");
+                await liff.init({ liffId: LIFF_ID , withLoginOnExternalBrowser: true});
+                
+                if (!liff.isLoggedIn()) {
+                    showLoading("กรุณาเข้าสู่ระบบ...");
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+
+                const profile = await liff.getProfile();
+                lineUserId = profile.userId;
+                if (profile.pictureUrl) {
+                    userPictureEl.src = profile.pictureUrl;
+                    userPictureEl.onerror = () => { userPictureEl.src = 'https://placehold.co/60x60/574b60/eaf0ce?text=VDO'; };
+                }
+
+                if (liff.isApiAvailable('shareTargetPicker')) {
+                    shareTargetPickerAvailable = true;
+                } else {
+                    showError('ไม่รองรับ', 'ฟีเจอร์แชร์นี้ไม่รองรับในเวอร์ชัน LINE ของคุณ');
+                }
+                
+                
+                console.log('LIFF initialized, proceeding as anon user.');
+               
+
+                await fetchHistory();
+
+            } catch (error) {
+                console.error('LIFF Init Error:', error);
+                showError('LIFF Error', 'ไม่สามารถเริ่มต้น LIFF ได้: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        
+        function initializeSupabase() {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            } catch (error) {
+                console.error('Supabase Init Error:', error);
+                showError('Supabase Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+            }
+        }
+
+       
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                resetUploader();
+                return;
+            }
+            if (!file.type.startsWith('video/')) {
+                showError('ไฟล์ไม่ถูกต้อง', 'กรุณาเลือกไฟล์วิดีโอเท่านั้น');
+                resetUploader();
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) {
+                showError('ไฟล์ใหญ่เกินไป', 'กรุณาเลือกวิดีโอที่มีขนาดไม่เกิน 50MB');
+                resetUploader();
+                return;
+            }
+
+            videoFile = file;
+            fileLabel.textContent = file.name;
+            const fileUrl = URL.createObjectURL(file);
+            videoPreview.src = fileUrl;
+            previewArea.style.display = 'block';
+
+            showLoading('กำลังสร้างภาพปก...');
+            generateThumbnail(fileUrl);
+        }
+
+    
+        function triggerPlaceholderFallback(reason) {
+            console.warn(`Using placeholder thumbnail. Reason: ${reason}`);
+            showLoading('กำลังใช้ภาพปกเริ่มต้น');
+            createPlaceholderThumbnail(videoFile.name, (blob) => {
+                thumbnailBlob = blob;
+                videoDimensions = { width: 16, height: 9 };
+                previewArea.style.aspectRatio = '16 / 9';
+                
+                hideLoading();
+                btnShare.disabled = false;
+                showSuccess('พร้อมแชร์', 'ไฟล์นี้จะใช้ภาพปกเริ่มต้นแทน');
+            });
+        }
+
+    
+        function generateThumbnail(videoUrl) {
+            if (!videoProcessor || !canvasProcessor) {
+                hideLoading();
+                showError('เกิดข้อผิดพลาด', 'ไม่พบองค์ประกอบประมวลผลวิดีโอ');
+                return;
+            }
+
+            let thumbnailTimeout = null; 
+
+           
+            thumbnailTimeout = setTimeout(() => {
+                videoProcessor.src = ''; 
+                triggerPlaceholderFallback('Generation timed out (likely iOS/HEVC)');
+            }, 5000); // 5 seconds
+            
+            videoProcessor.onloadeddata = null;
+            videoProcessor.onseeked = null;
+            videoProcessor.onerror = null;
+            
+            videoProcessor.src = videoUrl;
+            
+            videoProcessor.onloadeddata = () => {
+                videoProcessor.currentTime = Math.min(1, videoProcessor.duration / 2); 
+            };
+            
+            videoProcessor.onseeked = () => {
+               
+                if (thumbnailTimeout) clearTimeout(thumbnailTimeout);
+                thumbnailTimeout = null;
+
+                const ctx = canvasProcessor.getContext('2d');
+                canvasProcessor.width = videoProcessor.videoWidth;
+                canvasProcessor.height = videoProcessor.videoHeight;
+
+                videoDimensions.width = videoProcessor.videoWidth;
+                videoDimensions.height = videoProcessor.videoHeight;
+                
+                previewArea.style.aspectRatio = `${videoDimensions.width} / ${videoDimensions.height}`;
+
+                ctx.drawImage(videoProcessor, 0, 0, canvasProcessor.width, canvasProcessor.height);
+                canvasProcessor.toBlob((blob) => {
+                    thumbnailBlob = blob;
+                    hideLoading();
+                    btnShare.disabled = false;
+                    showSuccess('พร้อมแชร์', 'สร้างภาพปกวิดีโอสำเร็จ!');
+                }, 'image/jpeg', 0.8);
+            };
+            
+            videoProcessor.onerror = (err) => {
+                
+                if (thumbnailTimeout) clearTimeout(thumbnailTimeout);
+                thumbnailTimeout = null;
+               
+            }
+        }
+        
+        
+        function createPlaceholderThumbnail(fileName, callback) {
+            const ctx = canvasProcessor.getContext('2d');
+            const w = 640;
+            const h = 360; 
+            canvasProcessor.width = w;
+            canvasProcessor.height = h;
+
+            
+            ctx.fillStyle = 'var(--color-bg-dark)';
+            ctx.fillRect(0, 0, w, h);
+
+           
+            ctx.strokeStyle = 'var(--color-accent)';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(w/2 - 100, h/2 - 60, 200, 120); 
+            
+            ctx.beginPath();
+            ctx.moveTo(w/2 - 30, h/2 - 40); // Play triangle
+            ctx.lineTo(w/2 - 30, h/2 + 40);
+            ctx.lineTo(w/2 + 50, h/2);
+            ctx.closePath();
+            ctx.fillStyle = 'var(--color-accent)';
+            ctx.fill();
+
+           
+            ctx.fillStyle = 'var(--color-text-light)';
+            ctx.font = '20px ' + getComputedStyle(document.body).fontFamily;
+            ctx.textAlign = 'center';
+            
+            const maxTextWidth = w - 40;
+            let truncatedName = fileName;
+            if (ctx.measureText(truncatedName).width > maxTextWidth) {
+                 while (ctx.measureText(truncatedName + '...').width > maxTextWidth) {
+                    truncatedName = truncatedName.substring(0, truncatedName.length - 1);
+                 }
+                 truncatedName += '...';
+            }
+            ctx.fillText(truncatedName, w/2, h - 35);
+
+            canvasProcessor.toBlob((blob) => {
+                callback(blob);
+            }, 'image/jpeg', 0.8);
+        }
+        
+       
+        async function handleShare() {
+            if (!videoFile || !thumbnailBlob || !shareTargetPickerAvailable) {
+                showError('ข้อมูลไม่ครบ', 'กรุณาเลือกวิดีโอและรอให้สร้างภาพปกสำเร็จก่อน');
+                return;
+            }
+            
+            showLoading('กำลังอัปโหลดวิดีโอ (0%)...');
+            
+            try {
+                const baseFileName = crypto.randomUUID();
+                const fileExtension = videoFile.name.split('.').pop() || 'mp4';
+                const videoFileName = `${baseFileName}.${fileExtension}`;
+                const thumbnailFileName = `${baseFileName}.jpg`;
+
+               
+                const userPathPrefix = lineUserId || 'public';
+                const videoPath = `videos/${userPathPrefix}/${videoFileName}`;
+                const thumbnailPath = `thumbnails/${userPathPrefix}/${thumbnailFileName}`;
+
+               
+                const fileContentType = videoFile.type === 'video/quicktime' ? 'application/octet-stream' : videoFile.type;
+
+                const { error: videoError } = await supabase.storage
+                    .from(STORAGE_BUCKET_NAME)
+                    .upload(videoPath, videoFile, {
+                        cacheControl: '3600',
+                        upsert: false,
+                        contentType: fileContentType,
+                        onUploadProgress: (progress) => {
+                            if (progress.lengthComputable) {
+                                const percent = Math.round((progress.loaded / progress.total) * 100);
+                                showLoading(`กำลังอัปโหลดวิดีโอ (${percent}%)...`);
+                            }
+                        }
+                    });
+                if (videoError) throw new Error(`Video upload failed: ${videoError.message}`);
+
+                showLoading('กำลังอัปโหลดภาพปก...');
+
+                
+                const { error: thumbnailError } = await supabase.storage
+                    .from(STORAGE_BUCKET_NAME)
+                    .upload(thumbnailPath, thumbnailBlob, {
+                        cacheControl: '3600',
+                        upsert: false,
+                        contentType: 'image/jpeg'
+                    });
+                if (thumbnailError) throw new Error(`Thumbnail upload failed: ${thumbnailError.message}`);
+
+              
+                const { data: videoUrlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(videoPath);
+                const { data: thumbnailUrlData } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(thumbnailPath);
+
+                if (!videoUrlData.publicUrl || !thumbnailUrlData.publicUrl) {
+                    throw new Error('Could not get public URLs for files.');
+                }
+                
+                const videoUrl = videoUrlData.publicUrl;
+                const thumbnailUrl = thumbnailUrlData.publicUrl;
+
+              
+                showLoading('กำลังบันทึกประวัติ...');
+                const { error: historyError } = await supabase
+                    .from(HISTORY_TABLE_NAME)
+                    .insert({
+                        line_user_id: lineUserId,
+                        video_url: videoUrl,
+                        thumbnail_url: thumbnailUrl,
+                        file_name: videoFile.name,
+                        video_width: videoDimensions.width,
+                        video_height: videoDimensions.height,
+                        
+                        video_storage_path: videoPath,
+                        thumbnail_storage_path: thumbnailPath
+                    });
+                
+                if (historyError) {
+                    console.error('Failed to save history:', historyError.message);
+                }
+
+                showLoading('กำลังเตรียมแชร์...');
+
+                const flexVideoMessage = buildFlexMessage(videoUrl, thumbnailUrl, videoFile.name, videoDimensions);
+
+              
+                await liff.shareTargetPicker([flexVideoMessage], { isMultiple: true });
+                
+                hideLoading();
+                showSuccess('แชร์สำเร็จ!', 'วิดีโอของคุณถูกส่งเรียบร้อยแล้ว');
+                resetUploader();
+                
+                await fetchHistory();
+
+            } catch (error) {
+                hideLoading();
+                console.error('Share process failed:', error);
+                showError('อัปโหลดหรือแชร์ล้มเหลว', error.message);
+            }
+        }
+        
+       
+        function buildFlexMessage(videoUrl, thumbnailUrl, fileName, dimensions) {
+            
+            let aspectRatioString = "16:9"; 
+            if (dimensions && dimensions.width > 0 && dimensions.height > 0) {
+                aspectRatioString = `${dimensions.width}:${dimensions.height}`;
+            }
+
+            return {
+                "type": "flex",
+                "altText": "ส่งวิดีโอใหม่ " + fileName,
+                "contents": {
+                    "type": "bubble",
+                    "size": "giga",
+                    "hero": {
+                        "type": "video",
+                        "url": videoUrl,
+                        "previewUrl": thumbnailUrl,
+                        "altContent": { 
+                            "type": "image", 
+                            "size": "full", 
+                            "aspectRatio": aspectRatioString, 
+                            "aspectMode": "fit", 
+                            "url": thumbnailUrl 
+                        },
+                        "aspectRatio": aspectRatioString
+                    },
+                    "body": {
+                        "type": "box", "layout": "vertical", "backgroundColor": "#3f334d",
+                        "contents": [
+                            { "type": "text", "text": "วิดีโอใหม่", "weight": "bold", "size": "xl", "color": "#eaf0ce" },
+                            { "type": "text", "text": "โปรโมชั่นเดือนนี้", "color": "#c0c5c1", "size": "sm", "wrap": true, "margin": "md" }
+                        ]
+                    },
+                    "footer": {
+                        "type": "box", "layout": "vertical", "backgroundColor": "#3f334d", "spacing": "sm",
+                        "contents": [
+                            { "type": "button", "style": "primary", "height": "sm", "action": { "type": "uri", "label": "คลิกเลย", "uri": "https://google.com" }, "color": "#574b60", "gravity": "center" }
+                        ]
+                    }
+                }
+            };
+        }
+        
+        
+        function resetUploader() {
+            fileInput.value = '';
+            videoFile = null;
+            thumbnailBlob = null;
+            btnShare.disabled = true;
+            fileLabel.textContent = 'แตะเพื่อเลือกวิดีโอ';
+            previewArea.style.display = 'none';
+            videoPreview.src = '';
+            videoProcessor.src = '';
+            videoDimensions = { width: 0, height: 0 };
+            previewArea.style.aspectRatio = '16 / 9'; 
+        }
+        
+     
+        async function fetchHistory(searchTerm = "") {
+            if (!lineUserId || !supabase) return;
+            
+            historyStatus.textContent = "กำลังโหลดประวัติ...";
+            historyList.innerHTML = ""; 
+            
+            try {
+               
+                let query = supabase
+                    .from(HISTORY_TABLE_NAME)
+                    .select('id, created_at, file_name, thumbnail_url, video_url, video_width, video_height, video_storage_path, thumbnail_storage_path')
+                    .eq('line_user_id', lineUserId)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (searchTerm) {
+                    query = query.ilike('file_name', `%${searchTerm}%`);
+                }
+                
+                const { data, error } = await query;
+                
+                if (error) throw error;
+                
+                renderHistory(data);
+                
+            } catch (error) {
+                console.error('Fetch History Error:', error.message);
+                historyStatus.textContent = "ไม่สามารถโหลดประวัติได้";
+            
+            }
+        }
+        
+       
+        function renderHistory(items = []) {
+            historyList.innerHTML = ""; 
+            
+            if (items.length === 0) {
+                historyStatus.textContent = "ไม่พบประวัติการแชร์";
+                historyStatus.style.display = 'block';
+                return;
+            }
+            
+            historyStatus.style.display = 'none';
+            
+            items.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'history-item';
+                
+                const createdDate = new Date(item.created_at).toLocaleString('th-TH', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+               
+                itemEl.innerHTML = `
+                    <div class="history-item-content">
+                        <img src="${item.thumbnail_url}" alt="Thumbnail" class="history-thumbnail" loading="lazy" onerror="this.src='https://placehold.co/100x60/574b60/eaf0ce?text=Error'">
+                        <div class="history-info">
+                            <div class="history-filename">${item.file_name || 'N/A'}</div>
+                            <div class="history-date">${createdDate}</div>
+                        </div>
+                    </div>
+                    <button class="delete-btn" title="ลบรายการนี้">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12.54 0c-.342.052-.682.107-1.022.166m11.518 0c-3.478-.397-6.57-.397-10.048 0M9.75 5.79v1.5H14.25v-1.5" />
+                        </svg>
+                    </button>
+                `;
+                
+               
+                const contentEl = itemEl.querySelector('.history-item-content');
+                const deleteBtn = itemEl.querySelector('.delete-btn');
+                
+                contentEl.addEventListener('click', () => handleReshare(item));
+                
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    handleDelete(item);
+                });
+                
+                historyList.appendChild(itemEl);
+            });
+        }
+        
+       
+        async function handleReshare(item) {
+            if (!shareTargetPickerAvailable) return;
+            
+            showLoading('กำลังเตรียมแชร์...');
+            
+            const dimensions = {
+                width: item.video_width,
+                height: item.video_height
+            };
+
+            const flexMessage = buildFlexMessage(item.video_url, item.thumbnail_url, item.file_name, dimensions);
+            
+            try {
+                await liff.shareTargetPicker([flexMessage], { isMultiple: true });
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                console.error('Reshare error:', error);
+                showError('แชร์ล้มเหลว', 'ไม่สามารถแชร์วิดีโอได้');
+            }
+        }
+
+       
+        async function handleDelete(item) {
+            if (!item.id || !item.video_storage_path || !item.thumbnail_storage_path) {
+                showError('ข้อมูลไม่ครบ', 'ไม่พบ ID หรือเส้นทางไฟล์สำหรับลบ');
+                return;
+            }
+
+            
+            const result = await Swal.fire({
+                title: 'ยืนยันการลบ?',
+                text: `คุณต้องการลบไฟล์ "${item.file_name}" ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก',
+                reverseButtons: true
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            
+            showLoading('กำลังลบไฟล์...');
+            try {
+                
+              
+                const { data, error } = await supabase.functions.invoke('delete-video-share', {
+                    body: {
+                        shareId: item.id,
+                        videoPath: item.video_storage_path,
+                        thumbnailPath: item.thumbnail_storage_path,
+                        lineUserId: lineUserId 
+                    },
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}` 
+                    }
+                });
+                
+
+
+                if (error) throw error; 
+                if (data.error) throw new Error(data.error); 
+
+                hideLoading();
+                showSuccess('ลบสำเร็จ', 'ลบรายการแชร์เรียบร้อยแล้ว');
+
+                
+                await fetchHistory(searchInput.value || ""); 
+
+            } catch (error) {
+                hideLoading();
+                console.error('Delete failed:', error);
+                showError('ลบไม่สำเร็จ', error.message);
+            }
+        }
+        
+       
+        function handleSearchInput(event) {
+            clearTimeout(searchDebounceTimer);
+            const searchTerm = event.target.value;
+            
+            searchDebounceTimer = setTimeout(() => {
+                fetchHistory(searchTerm);
+            }, 500);
+        }
+
+      
+        window.addEventListener('load', async () => {
+             initializeSupabase();
+            await initializeLiff();
+           
+            fileInput.addEventListener('change', handleFileSelect);
+            btnShare.addEventListener('click', handleShare);
+            searchInput.addEventListener('input', handleSearchInput);
+        });
+
+    </script>
+</body>
+</html>
