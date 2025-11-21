@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIFF Tag Tracker</title>
+    <meta name="description" content="LIFF Tag Tracker for MINI App" />
+    <meta name="author" content="T42" />
+    <meta property="og:title" content="LIFF Tag Tracker Admin-T42-thailand" />
+    <meta property="og:description" content="LIFF Tag Tracker Admin for MINI App" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://wusxtldmqsleacfcibum.supabase.co/storage/v1/object/public/user-images/U69f69a6d9b1bbb632a0ff7db6e67eeac/1757423533327.jpeg" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            
+            background: linear-gradient(135deg, #343330 0%, #45462a 50%, #7e5920 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        
+        .glass {
+            background: rgba(52, 51, 48, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            /* Border Color: #ffa737 */
+            border: 1px solid rgba(255, 167, 55, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+      
+        .text-gradient {
+            background: linear-gradient(to right, #dc851f, #ffa737);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+       
+        .loader-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(52, 51, 48, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loader-text {
+            margin-top: 20px;
+            color: #ffa737;
+            font-weight: 600;
+            letter-spacing: 1px;
+         
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+       
+        textarea:focus {
+            outline: none;
+            border-color: #ffa737;
+            box-shadow: 0 0 10px rgba(220, 133, 31, 0.5);
+        }
+        
+     
+        div:where(.swal2-container) div:where(.swal2-popup) {
+            background: #343330 !important;
+            border: 1px solid #7e5920;
+            color: #fff;
+        }
+        div:where(.swal2-icon).swal2-success {
+            border-color: #45462a;
+            color: #ffa737;
+        }
+
+      
+        div:where(.swal2-container) {
+           
+            z-index: 99999 !important; 
+        }
+       
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#343330',
+                        olive: '#45462a',
+                        bronze: '#7e5920',
+                        orange: '#dc851f',
+                        gold: '#ffa737',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <div id="loader" class="loader-overlay">
+        <img src="https://developers.line.biz/media/line-mini-app/LINE_spinner_light.svg" alt="Loading..." width="60" height="60">
+        <div class="loader-text">กำลังประมวลผล...</div>
+    </div>
+
+    <div id="app-container" class="w-full max-w-md glass rounded-2xl p-6 hidden opacity-0 transition-opacity duration-700">
+        
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gradient mb-2">LINE Tag Tracker</h1>
+            <p class="text-sm text-gray-300 font-light">ติดตามผู้ใช้งานและส่งข้อความ</p>
+        </div>
+
+        <div id="admin-panel" class="hidden">
+            <div class="mb-4">
+                <label class="block text-gold text-sm font-bold mb-2">Flex Message JSON</label>
+                <textarea id="flex-input" rows="10" class="w-full bg-[#1a1a18] text-white p-3 rounded-lg border border-olive text-xs font-mono" placeholder='{"type": "bubble", ...}'></textarea>
+            </div>
+            <button onclick="saveFlexMessage()" class="w-full bg-gradient-to-r from-bronze to-orange hover:from-orange hover:to-gold text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-105">
+                บันทึก Flex Message
+            </button>
+        </div>
+
+        <div id="user-panel" class="text-center">
+            <div id="status-icon" class="text-6xl mb-4">🚀</div>
+            <h2 id="status-title" class="text-xl font-bold text-white mb-2">กำลังทำงาน</h2>
+            <p id="status-desc" class="text-gray-400 text-sm">กำลังบันทึกข้อมูลและส่งข้อความ...</p>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const LIFF_ID = "2007934888-j6V824Xw";
+        const SUPABASE_URL = "https://wusxtldmqsleacfcibum.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1c3h0bGRtcXNsZWFjZmNpYnVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyOTE5NTEsImV4cCI6MjA2OTg2Nzk1MX0.qiChtXkvDonyePfsP3MSpsizcm1708RFazGTZqtUZ8I";
+        
+       
+        const EDGE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/save-user-tag`; 
+
+       
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+       
+        const showLoader = () => document.getElementById('loader').style.display = 'flex';
+        const hideLoader = () => document.getElementById('loader').style.opacity = '0';
+        const showApp = () => {
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+                const app = document.getElementById('app-container');
+                app.classList.remove('hidden');
+                setTimeout(() => app.classList.remove('opacity-0'), 50);
+            }, 500);
+        };
+
+       
+        async function main() {
+            try {
+                showLoader(); 
+
+                await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const isAdmin = urlParams.get('mode') === 'admin';
+
+                hideLoader();
+                showApp();
+
+                if (isAdmin) {
+                 
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                    document.getElementById('user-panel').classList.add('hidden');
+                    await loadCurrentFlex();
+                } else {
+                  
+                    document.getElementById('admin-panel').classList.add('hidden');
+                    await handleUserClickAndSend();
+                }
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire('Error', err.message, 'error');
+            }
+        }
+
+     
+        async function loadCurrentFlex() {
+            const { data, error } = await supabaseClient
+                .from('flex_storage')
+                .select('content')
+                .eq('id', 1) 
+                .single();
+            
+            if (data) {
+                document.getElementById('flex-input').value = JSON.stringify(data.content, null, 2);
+            }
+        }
+
+        async function saveFlexMessage() {
+            const jsonStr = document.getElementById('flex-input').value;
+            try {
+                const jsonContent = JSON.parse(jsonStr); 
+                showLoader();
+                
+                const { error } = await supabaseClient
+                    .from('flex_storage')
+                    .upsert({ id: 1, content: jsonContent });
+
+                hideLoader();
+
+                if (error) throw error;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ',
+                    text: 'Flex Message ถูกอัปเดตแล้ว',
+                    confirmButtonColor: '#dc851f'
+                }).then(() => {
+                    Swal.close();
+                    liff.closeWindow(); 
+                });
+
+            } catch (e) {
+                hideLoader();
+                Swal.fire('JSON Error', 'รูปแบบ JSON ไม่ถูกต้อง กรุณาตรวจสอบ', 'error');
+            }
+        }
+
+      
+        async function handleUserClickAndSend() { 
+            updateStatus('⏳', 'กำลังประมวลผล...', 'กำลังดึง User ID และ Tag');
+
+            const profile = await liff.getProfile();
+            const userId = profile.userId;
+            const pictureUrl = profile.pictureUrl
+            const displayName = profile.displayName
+            
+          
+            const urlParams = new URLSearchParams(window.location.search);
+            const tag = urlParams.get('tag') || 'default'; 
+
+           
+            try {
+                updateStatus('💾', `กำลังบันทึก Tag: ${tag}`, 'ส่งข้อมูลไปยังเซิร์ฟเวอร์');
+                
+                const saveResponse = await fetch(EDGE_FUNCTION_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: userId, 
+                        pictureUrl: pictureUrl,
+                        displayName: displayName,
+                        tag: tag
+                    })
+                });
+
+                const saveResult = await saveResponse.json();
+
+                if (!saveResponse.ok) {
+                    throw new Error(saveResult.error || 'Server Save Error');
+                }
+                
+              
+                updateStatus('📦', 'กำลังดึงข้อความ', 'เตรียม Flex Message เพื่อส่ง');
+
+                const { data: flexData } = await supabaseClient
+                    .from('flex_storage')
+                    .select('content')
+                    .eq('id', 1)
+                    .single();
+
+                if (!flexData) {
+                    updateStatus('❌', 'ไม่พบ Flex Message', 'แอดมินยังไม่ได้ตั้งค่า');
+                    return;
+                }
+
+               
+                updateStatus('📤', 'กำลังส่งข้อความ...', 'ส่ง Flex Message เข้า LINE');
+                
+                await liff.sendMessages([{
+                    type: 'flex',
+                    altText: 'New Message from App',
+                    contents: flexData.content
+                }]);
+
+                updateStatus('✅', 'เรียบร้อย!', `บันทึก Tag '${tag}' และส่งข้อความแล้ว`);
+                
+              
+                setTimeout(() => {
+                    liff.closeWindow();
+                }, 2000);
+
+            } catch (err) {
+                console.error(err);
+                updateStatus('❌', 'เกิดข้อผิดพลาด', err.message);
+                Swal.fire('Error', `ไม่สามารถประมวลผลได้: ${err.message}`, 'error');
+            }
+        }
+
+        function updateStatus(icon, title, desc) {
+            document.getElementById('status-icon').innerText = icon;
+            document.getElementById('status-title').innerText = title;
+            document.getElementById('status-desc').innerText = desc;
+        }
+
+       
+        main();
+    </script>
+</body>
+</html>
